@@ -54,7 +54,7 @@ A top level `Analysis` directory which will contain results from any steps we ru
 9. `cd /Share/tamu/bin`
 10. `ln -s ../Packages/Scythe/current/scythe`
 
-### Testing Scythe ###
+### Testing Scythe: part 1 ###
 1. Using supplied sample files that are part of Scythe installation
 2. `mkdir -p Analysis/Scythe_test`
 3. `cd Analysis/Scythe_test`
@@ -75,4 +75,29 @@ Resulting output file does indeed to be trimmed:
 ls -lh trimmed_seqs.fasta ../../Packages/Scythe/current/testing/reads.fastq
 -rw-r--r--+ 1 keith dglemay 2.3M Oct 17 06:45 ../../Packages/Scythe/current/testing/reads.fastq
 -rw-r--r--+ 1 keith dglemay 2.0M Oct 17 07:02 trimmed_seqs.fastq
+```
+
+### Extracting adaptor sequences ###
+
+From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse`
+
+### Testing Scythe: part 2 ###
+
+Now to try with some real DNAse-Seq data (which is still all zipped up).
+
+1. `cd Analysis/Scythe_test`
+2. `cp ../../Data/DNase-Seq/Mouse/Sample_2_10.zip .` - this is the smallest file
+3. `unzip Sample_2_10.zip`
+4. `cd Sample_2_10`
+
+Main run:
+```bash
+scythe -a ../../../Data/DNase-Seq/Mouse/adapter_sequences.fasta -o 2_10_AGTTCC_L008_R1_001_trimmed.fastq 2_10_AGTTCC_L008_R1_001.fastq.gz
+
+prior: 0.300
+
+Adapter Trimming Complete
+contaminated: 264003, uncontaminated: 3735997, total: 4000000
+contamination rate: 0.066001
+
 ```
