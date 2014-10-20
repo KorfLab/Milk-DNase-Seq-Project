@@ -43,8 +43,17 @@ rsync -a -P rsync://hgdownload.cse.ucsc.edu/goldenPath/bosTau7/bigZips ./
 
 ```
 
-
 Note that two versions of the mouse genome were downloaded. Also, for mm9 I downloaded the comparison alignments to bosTau7. Initially, just the 'chromosomes' subdirectories of the mouse URLs were copied.
+
+### Extracting adaptor sequences ###
+
+From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse/adapter_sequences.fasta`
+
+I then extracted the barcodes from the index adapters as follows:
+
+```bash
+cat adapter_sequences.fasta | sed 's/GATCGGAAGAGCACACGTCTGAACTCCAGTCAC//' | grep -v ">" | tail -n 24 | cut -c 1-6 > barcodes.txt
+```
 
 
 ## Other directories for project ##
@@ -69,43 +78,26 @@ A top level `Analysis` directory which will contain results from any steps we ru
 9. `cd /Share/tamu/bin`
 10. `ln -s ../Packages/Scythe/current/scythe`
 
-### Testing Scythe: part 1 ###
-1. Using supplied sample files that are part of Scythe installation
-2. `mkdir -p Analysis/Scythe_test`
-3. `cd Analysis/Scythe_test`
-4. Run Scythe:
+### Making test dataset ###
+
+While testing Scythe and other tools, it will be good to just one work with a few FASTQ files. Make copy of `Sample_2_10.zip` sequences as this is the smallest file:
 
 ```bash
-scythe -a ../../Packages/Scythe/current/illumina_adapters.fa -o trimmed_seqs.fastq ../../Packages/Scythe/current/testing/reads.fastq
-prior: 0.300
-
-Adapter Trimming Complete
-contaminated: 1329, uncontaminated: 8671, total: 10000
-contamination rate: 0.132900
+cd Analyis
+mkdir Test
+cp ../../Data/DNase-Seq/Mouse/Sample_2_10.zip .
+unzip Sample_2_10.zip
+cd Sample_2_10
 ```
 
-Resulting output file does indeed to be trimmed:
-
-```bash
-ls -lh trimmed_seqs.fasta ../../Packages/Scythe/current/testing/reads.fastq
--rw-r--r--+ 1 keith dglemay 2.3M Oct 17 06:45 ../../Packages/Scythe/current/testing/reads.fastq
--rw-r--r--+ 1 keith dglemay 2.0M Oct 17 07:02 trimmed_seqs.fastq
-```
-
-
-### Extracting adaptor sequences ###
-
-From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse/adapter_sequences.fasta`
-
-I then extracted the barcodes from the index adapters as follows:
-
-```bash
-cat adapter_sequences.fasta | sed 's/GATCGGAAGAGCACACGTCTGAACTCCAGTCAC//' | grep -v ">" | tail -n 24 | cut -c 1-6 > barcodes.txt
-```
+### Checking barcodes in test dataset
 
 Presumably barcodes in file names should match barcodes in the FASTQ identifiers in the respective files. But this is not what happens:
 
 ```bash
+cd Analysis/Test
+mkdir Barcode_check
+cd Barcode_check
 gunzip -c 2_10_AGTTCC*.fastq.gz | grep "@HWI" | sed 's/.* 1:N:0://' | sort | uniq -c > barcodes_in_identifiers.txt
 
 cat barcodes_in_identifiers.txt
@@ -145,16 +137,6 @@ grep -f extra_barcodes.txt /share/tamu/Data/DNase-Seq/Mouse/adapter_sequences.fa
 
 No matches at all! Though the two N cases would match if you treat them as ambiguous bases.
 
-
-### Testing Scythe: part 2 ###
-
-Now to try with some real DNAse-Seq data (which is still all zipped up).
-
-1. `cd Analysis/Scythe_test`
-2. `cp ../../Data/DNase-Seq/Mouse/Sample_2_10.zip .` - this is the smallest file
-3. `unzip Sample_2_10.zip`
-4. `cd Sample_2_10`
-
 Main run:
 ```bash
 scythe -a ../../../Data/DNase-Seq/Mouse/adapter_sequences.fasta -o 2_10_AGTTCC_L008_R1_001_trimmed.fastq 2_10_AGTTCC_L008_R1_001.fastq.gz
@@ -166,3 +148,88 @@ contaminated: 264003, uncontaminated: 3735997, total: 4000000
 contamination rate: 0.066001
 
 ```
+
+### Testing Scythe: part 1 ###
+1. Using supplied sample files that are part of Scythe installation
+2. `mkdir -p Analysis/Test/Scythe_test`
+3. `cd Analysis/Test/Scythe_test`
+4. Run Scythe:
+
+```bash
+scythe -a ../../../Packages/Scythe/current/illumina_adapters.fa -o trimmed_seqs.fastq ../../../Packages/Scythe/current/testing/reads.fastq
+prior: 0.300
+
+Adapter Trimming Complete
+contaminated: 1329, uncontaminated: 8671, total: 10000
+contamination rate: 0.132900
+```
+
+Resulting output file does indeed to be trimmed:
+
+```bash
+ls -lh trimmed_seqs.fasta ../../../Packages/Scythe/current/testing/reads.fastq
+-rw-r--r--+ 1 keith dglemay 2.3M Oct 17 06:45 ../../../Packages/Scythe/current/testing/reads.fastq
+-rw-r--r--+ 1 keith dglemay 2.0M Oct 17 07:02 trimmed_seqs.fastq
+```
+
+
+
+
+### Testing Scythe: part 2 ###
+
+Now to try with some real DNAse-Seq data (which is still all zipped up).
+
+```bash
+cd Analysis/Test/Scythe_test
+ln -s ../Sample_2_10/2_10_AGTTCC_L008_R1_001.fastq.gz
+ln -s ../../../Data/DNase-Seq/Mouse/adapter_sequences.fasta
+scythe -a adapter_sequences.fasta -o 2_10_AGTTCC_L008_R1_001_trimmed.fastq 2_10_AGTTCC_L008_R1_001.fastq.gz
+
+prior: 0.300
+
+Adapter Trimming Complete
+contaminated: 264003, uncontaminated: 3735997, total: 4000000
+contamination rate: 0.066001
+
+
+head -n 16 2_10_AGTTCC_L008_R1_001_trimmed.fastq
+@HWI-ST976:178:c53v2acxx:8:1101:1273:2083 1:N:0:AGTTCC
+AGGTTTCAGTTGATTGTCCTGTTTTCACTCACTGATTAGACAGTTAAATAA
++
+@CCDFFFFHFHDBIIJGGGEGEHHJIJJIJJJJJJJJIBFHHIBGIIIJFI
+@HWI-ST976:178:c53v2acxx:8:1101:1277:2127 1:N:0:AGTTCC
+N
++
+B
+@HWI-ST976:178:c53v2acxx:8:1101:1317:2174 1:N:0:AGTTCC
+TGACGACTTGAAAAATGACGAAATCACTAAAAAACGTGAAAAATGAGAAAT
++
+@@@FDDDDFHFHHJGBGHIGHGGIJJJJJJJJJJIGBGIIIIIGGHGIJEG
+@HWI-ST976:178:c53v2acxx:8:1101:1453:2223 1:N:0:AGTTCC
+N
++
+B
+```
+
+This suggests that when trimming occurs, the sequence is being replaced with a single N (subsequently confirmed with Vince Buffalo). 
+
+Now to see how much sequence is being trimmed (using some awk skillz to just grab every second line from file):
+
+```bash
+awk 'NR %4 == 2 {print length($0); } ' 2_10_AGTTCC_L008_R1_001_trimmed.fastq | sort | uniq -c
+ 238554 1
+   1124 36
+   1658 37
+   1618 38
+   1546 39
+   2332 40
+   2087 41
+   2179 42
+   3796 43
+   4059 44
+   5050 45
+3735997 51
+
+```
+
+So about 93% (3735997/(16000000/4) of sequences undergo no trimming, about 6% of sequences are completely removed by trimming, and about 0.5% have an intermediate number of bases removed.
