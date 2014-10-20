@@ -12,8 +12,6 @@ In the shared folder, we will create:
 	Data/Genomes/
 	Data/Genomes/Cow/
 	Data/Genomes/Mouse/	
-	Data/Genomes/Mouse/mm9/
-	Data/Genomes/Mouse/mm10/
 	Data/DNAse-Seq/
 	Data/DNAse-Seq/Cow/
 	Data/DNAse-Seq/Mouse/
@@ -22,15 +20,32 @@ In the shared folder, we will create:
 	Data/RNA-Seq/Mouse/
 
 	
-`Genomes` subdirectory will contain reference genome sequences and annotations, whereas
-`DNAse-Seq` and `RNA-Seq` directories will contain our raw experimental data (in date-
-versioned subdirectories).
+`Genomes` subdirectory will ultimately contain reference genome sequences and annotations, whereas `DNAse-Seq` and `RNA-Seq` directories will contain our raw experimental data (in date-versioned subdirectories).
  
-I've also added a `Data/RNA-Seq/Cow/Metadata` for a couple of files Danielle provided
-about the Cow RNA-Seq data:
+I've also added a `Data/RNA-Seq/Cow/Metadata` for a couple of files Danielle provided about the Cow RNA-Seq data:
 
 `CowLactationRNASeqMetadata.txt` - A guess of what the sample IDs really mean
 `CowLactationRNASeqMappingStats.tsv` - tab delimited file containing mapping statistics from Baylor
+
+### Genome data ###
+Genome datasets for mouse and cow were downloaded from the UCSC Genome Browser FTP site using rsync:
+
+```bash
+cd Data/Genomes/Mouse/mm9
+rsync -a -P rsync://hgdownload.cse.ucsc.edu/goldenPath/mm9/chromosomes .
+rsync -a -P rsync://hgdownload.cse.ucsc.edu/goldenPath/mm9/vsBosTau7 .
+cd ../mm10
+rsync -a -P rsync://hgdownload.cse.ucsc.edu/goldenPath/mm10/chromosomes .
+cd ../../Cow/
+mkdir bosTau7
+cd bosTau7
+rsync -a -P rsync://hgdownload.cse.ucsc.edu/goldenPath/bosTau7/bigZips ./
+
+```
+
+
+Note that two versions of the mouse genome were downloaded. Also, for mm9 I downloaded the comparison alignments to bosTau7. Initially, just the 'chromosomes' subdirectories of the mouse URLs were copied.
+
 
 ## Other directories for project ##
 
@@ -77,9 +92,59 @@ ls -lh trimmed_seqs.fasta ../../Packages/Scythe/current/testing/reads.fastq
 -rw-r--r--+ 1 keith dglemay 2.0M Oct 17 07:02 trimmed_seqs.fastq
 ```
 
+
 ### Extracting adaptor sequences ###
 
-From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse`
+From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse/adapter_sequences.fasta`
+
+I then extracted the barcodes from the index adapters as follows:
+
+```bash
+cat adapter_sequences.fasta | sed 's/GATCGGAAGAGCACACGTCTGAACTCCAGTCAC//' | grep -v ">" | tail -n 24 | cut -c 1-6 > barcodes.txt
+```
+
+Presumably barcodes in file names should match barcodes in the FASTQ identifiers in the respective files. But this is not what happens:
+
+```bash
+gunzip -c 2_10_AGTTCC*.fastq.gz | grep "@HWI" | sed 's/.* 1:N:0://' | sort | uniq -c > barcodes_in_identifiers.txt
+
+cat barcodes_in_identifiers.txt
+
+  5333 AATTCC
+   5726 ACTTCC
+   3433 AGATCC
+   3424 AGCTCC
+   6579 AGGTCC
+    614 AGNTCC
+   4143 AGTACC
+   5102 AGTCCC
+    713 AGTGCC
+    172 AGTNCC
+  34555 AGTTAC
+  60077 AGTTCA
+14783490 AGTTCC
+  12199 AGTTCG
+  21071 AGTTCT
+   3341 AGTTGC
+  23722 AGTTTC
+  20326 ATTTCC
+  20336 CGTTCC
+   4689 GGTTCC
+   2378 TGTTCC
+   
+```bash
+
+Two of these contain an N character in the barcode. Are the non AGTTCC barcodes all part of the official set of barcodes that I extracted above?
+
+```bash
+cat barcodes_in_identifiers.txt | sed 's/ .* //' | grep -v AGTTCC > extra_barcodes.txt
+grep -f extra_barcodes.txt /share/tamu/Data/DNase-Seq/Mouse/adapter_sequences.fasta
+
+
+```
+
+No matches at all! Though the two N cases would match if you treat them as ambiguous bases.
+
 
 ### Testing Scythe: part 2 ###
 
