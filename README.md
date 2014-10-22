@@ -4,7 +4,7 @@ Milk-DNase-Seq-Project
 Analysis of milk DNase-Seq data in mouse and cow.
 
 
-## Setup of directories for raw data ##
+# Setup of directories for raw data #
 
 In the shared folder, we will create:
 
@@ -27,7 +27,7 @@ I've also added a `Data/RNA-Seq/Cow/Metadata` for a couple of files Danielle pro
 `CowLactationRNASeqMetadata.txt` - A guess of what the sample IDs really mean
 `CowLactationRNASeqMappingStats.tsv` - tab delimited file containing mapping statistics from Baylor
 
-### Genome data ###
+## Genome data ##
 Genome datasets for mouse and cow were downloaded from the UCSC Genome Browser FTP site using rsync:
 
 ```bash
@@ -45,7 +45,7 @@ rsync -a -P rsync://hgdownload.cse.ucsc.edu/goldenPath/bosTau7/bigZips ./
 
 Note that two versions of the mouse genome were downloaded. Also, for mm9 I downloaded the comparison alignments to bosTau7. Initially, just the 'chromosomes' subdirectories of the mouse URLs were copied.
 
-### Extracting adaptor sequences ###
+## Extracting adaptor sequences ##
 
 From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse/adapter_sequences.fasta`
 
@@ -56,7 +56,7 @@ cat adapter_sequences.fasta | sed 's/GATCGGAAGAGCACACGTCTGAACTCCAGTCAC//' | grep
 ```
 
 
-## Other directories for project ##
+# Other directories for project #
 
 A top level `Code` folder will contain scripts used to analyze data. This may be expanded to contain subdirectories (if we have some code in Git repositories).
 
@@ -66,19 +66,8 @@ A top level `bin` directory will contain symbolic links to executables in either
 
 A top level `Analysis` directory which will contain results from any steps we run.
 
-## Installing Scythe (v0.991) ##
-1. Cloned locally from https://github.com/vsbuffalo/scythe
-2. `mkdir -p Packages/Scythe`
-3. Use `scp` to copy local `scythe` directory to `Packages/Scythe/c128b19c65` # use SHA-1 hash for directory name
-4. `cd Packages/Scythe`
-5. `ln -s c128b19c65 current`
-6. `cd current`
-7. `make all`
-8. No errors reported at this point, so…
-9. `cd /Share/tamu/bin`
-10. `ln -s ../Packages/Scythe/current/scythe`
 
-### Making test dataset ###
+# Making test dataset #
 
 While testing Scythe and other tools, it will be good to just one work with a few FASTQ files. Make copy of `Sample_2_10.zip` sequences as this is the smallest file:
 
@@ -90,7 +79,8 @@ unzip Sample_2_10.zip
 cd Sample_2_10
 ```
 
-### Checking barcodes in test dataset
+
+## Checking barcodes in test dataset ##
 
 Presumably barcodes in file names should match barcodes in the FASTQ identifiers in the respective files. But this is not what happens:
 
@@ -149,7 +139,20 @@ contamination rate: 0.066001
 
 ```
 
-### Testing Scythe: part 1 ###
+# Installing Scythe (v0.991) #
+1. Cloned locally from https://github.com/vsbuffalo/scythe
+2. `mkdir -p Packages/Scythe`
+3. Use `scp` to copy local `scythe` directory to `Packages/Scythe/c128b19c65` # use SHA-1 hash for directory name
+4. `cd Packages/Scythe`
+5. `ln -s c128b19c65 current`
+6. `cd current`
+7. `make all`
+8. No errors reported at this point, so…
+9. `cd /share/tamu/bin`
+10. `ln -s ../Packages/Scythe/current/scythe`
+
+
+## Testing Scythe: part 1 ##
 1. Using supplied sample files that are part of Scythe installation
 2. `mkdir -p Analysis/Test/Scythe_test`
 3. `cd Analysis/Test/Scythe_test`
@@ -173,11 +176,9 @@ ls -lh trimmed_seqs.fasta ../../../Packages/Scythe/current/testing/reads.fastq
 ```
 
 
+## Testing Scythe: part 2 ##
 
-
-### Testing Scythe: part 2 ###
-
-Now to try with some real DNAse-Seq data (which is still all zipped up).
+Now to try with some real DNAse-Seq data:
 
 ```bash
 cd Analysis/Test/Scythe_test
@@ -233,3 +234,89 @@ awk 'NR %4 == 2 {print length($0); } ' 2_10_AGTTCC_L008_R1_001_trimmed.fastq | s
 ```
 
 So about 93% (3735997/(16000000/4) of sequences undergo no trimming, about 6% of sequences are completely removed by trimming, and about 0.5% have an intermediate number of bases removed.
+
+
+# Installing Sickle (v1.33) #
+1. Cloned locally from https://github.com/najoshi/sickle
+2. `mkdir -p Packages/Sickle`
+3. Use `scp` to copy local `sickle` directory to `Packages/Sickle/7667f14` # use SHA-1 hash for directory name
+4. `cd Packages/Sickle`
+5. `ln -s 7667f14 current`
+6. `cd current`
+7. `make`
+8. No errors reported at this point, so…
+9. `cd /share/tamu/bin`
+10. `ln -s ../Packages/Sickle/current/sickle`
+
+## Testing Sickle ##
+
+This is single-end data, so we can use the 'se' mode of Sickle and test on a raw FASTQ file. Will use 'sanger' mode for quality encoding (which is equivalent to CASAVA >= 1.8).
+
+```bash
+cd /share/tamu/Analysis/Test
+mkdir Sickle_test
+cd Sickle_test
+ln -s ../Sample_2_10/2_10_AGTTCC_L008_R1_001.fastq.gz
+
+sickle se -f 2_10_AGTTCC_L008_R1_001.fastq.gz -o 2_10_AGTTCC_L008_R1_001_trimmed.fastq -t sanger
+
+SE input file: 2_10_AGTTCC_L008_R1_001.fastq.gz
+
+Total FastQ records: 4000000
+FastQ records kept: 3968789
+FastQ records discarded: 31211
+```
+
+Sickle removes sequences if the trimmed sequence is less than a specified length (default = 20 bp), so just under 1% of the sequences were completely removed for this file.
+
+
+Now can try the same thing but on the already adapter-trimmed sequence from Scythe:
+
+```bash
+sickle se -f ../Scythe_test/2_10_AGTTCC_L008_R1_001_trimmed.fastq -o 2_10_AGTTCC_L008_R1_001_trimmedx2.fastq -t sanger
+
+SE input file: ../Scythe_test/2_10_AGTTCC_L008_R1_001_trimmed.fastq
+
+Total FastQ records: 4000000
+FastQ records kept: 3739975
+FastQ records discarded: 260025
+
+```
+
+Now ends up discarding about 7% of input reads. Finally, try the `-n` option to also trim at first appearance of an N:
+
+```bash
+sickle se -f ../Scythe_test/2_10_AGTTCC_L008_R1_001_trimmed.fastq -o 2_10_AGTTCC_L008_R1_001_trimmedx2_no_n.fastq -t sanger -n
+
+SE input file: ../Scythe_test/2_10_AGTTCC_L008_R1_001_trimmed.fastq
+
+Total FastQ records: 4000000
+FastQ records kept: 3738889
+FastQ records discarded: 261111
+```
+
+This discards 1,086 more sequences than before, suggesting that there must have been some sequences which have Ns, but which otherwise were not low quality (and are not the single-N sequences generated by Scythe):
+
+```bash
+awk 'NR % 4 == 2' ../Scythe_test/2_10_AGTTCC_L008_R1_001_trimmed.fastq  | grep N | grep -vE "^N$" | wc -l
+1513
+```
+
+So, *after* trimming with Scythe, there were 1,513 sequences with at least one ambiguous base (exlcuding those with *only* one ambiguous base), but the earlier result suggests that the `-n` option of Sickle only removed 1,086 sequences. Can double check that `-n` option removed all sequences with at least one N:
+
+```bash
+awk 'NR % 4 == 2' 2_10_AGTTCC_L008_R1_001_trimmedx2_no_n.fastq  | grep -c N
+0
+```
+
+Not quite sure what is happening here, and in any case we probably don't want to use `-n` option because most occurences of an N are just where there is 1 N in the read. These may still be useful for aligning to a reference.
+
+## Testing Scythe + Sickle combined
+
+Want to use makefiles for reproducible bioinformatics.
+
+```bash
+mkdir /share/tamu/Analysis/Test/Trimming_test_using_make
+cd Trimming_test_using_make
+ln -s ../Sample_2_10/2_10_AGTTCC_L008_R1_001.fastq.gz
+```
