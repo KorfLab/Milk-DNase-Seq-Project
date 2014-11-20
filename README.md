@@ -27,6 +27,16 @@ I've also added a `Data/RNA-Seq/Cow/Metadata` for a couple of files Danielle pro
 `CowLactationRNASeqMetadata.txt` - A guess of what the sample IDs really mean
 `CowLactationRNASeqMappingStats.tsv` - tab delimited file containing mapping statistics from Baylor
 
+## DNAse-Seq data for mouse ##
+The data exists as a set of zip files (one per sample). Each zip file contains several FASTQ files. Need to unzip everything (until we have enough secondary output files):
+
+```bash
+cd /share/tamu/Data/DNase-Seq/Mouse
+# need to quote names for expansion to work with unzip (don't know why)
+$ unzip '*.zip'
+```
+
+
 ## Genome data ##
 Genome datasets for mouse and cow were downloaded from the UCSC Genome Browser FTP site using rsync:
 
@@ -313,10 +323,23 @@ Not quite sure what is happening here, and in any case we probably don't want to
 
 ## Testing Scythe + Sickle combined
 
-Want to use makefiles for reproducible bioinformatics.
+With some difficulty, I made a make file that runs Scythe and Sickle on a small number of test FASTQ files. This makefile (`/share/tamu/Code/run_scythe_and_sickle.mk`) removes intermediate output files, leaving only processed FASTQ files.
+
+The details of testing will not be included here.
+
+# Main run of Sickle and Scythe #
+
+Make new directory which will contain symbolic links to all FASTQ files and then analysis output files will be created in this directory from subsequent steps.
 
 ```bash
-mkdir /share/tamu/Analysis/Test/Trimming_test_using_make
-cd Trimming_test_using_make
-ln -s ../Sample_2_10/2_10_AGTTCC_L008_R1_001.fastq.gz
+cd /share/tamu/Analysis
+mkdir All_FASTQ_files
+cd All_FASTQ_files
+find /share/tamu/Data/DNase-Seq/Mouse/ -type f -name "*.fastq.gz" -exec ln -s {} \;
+```
+
+I made a simple bash script (`/share/tamu/Code/run_scythe_and_sickle.sh`) which is really just a wrapper around the make file. Can then submit this job to the queue with qsub command:
+
+```bash
+qsub -S /bin/bash -pe threaded 2 -M keith@bradnam.co /share/tamu/Code/run_scythe_and_sickle.sh
 ```
