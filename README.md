@@ -343,3 +343,27 @@ I made a simple bash script (`/share/tamu/Code/run_scythe_and_sickle.sh`) which 
 ```bash
 qsub -S /bin/bash -pe threaded 2 -M keith@bradnam.co /share/tamu/Code/run_scythe_and_sickle.sh
 ```
+
+This ran overnight and finished creating a *_processed.fastq file for each of the 120 input files. Two of the output files were empty (`8Lvr_20_GTCCGC_L007_R1_001_processed.fastq` and `8Lvr_50_GTGAAA_L007_R1_001_processed.fastq`). Checking these by hand, I see that the input *fastq.gz files are also empty, so we can just ignore these from now on;
+
+```bash
+rm 8Lvr_20_GTCCGC_L007_R1_001_processed.fastq 8Lvr_50_GTGAAA_L007_R1_001_processed.fastq
+```
+
+# Testing short read mappers #
+
+## Installing bowtie2 (version 2.2.4) ##
+
+1. Cloned locally from https://github.com/BenLangmead/bowtie2.git
+2. `mkdir -p Packages/Bowtie2`
+3. Use `scp` to copy local `scythe` directory to `Packages/Bowtie2/1d0bc49125` # use SHA-1 hash for directory name
+4. `cd Packages/Bowtie2`
+5. `ln -s 1d0bc49125 current`
+6. `cd current`
+7. `cd /share/tamu/Packages/Bowtie2/current/`
+8. `make all`
+8. No errors reported at this point, so…
+9. `cd /share/tamu/bin`
+10. `ln -s ../Packages/Bowtie2/current/bowtie2`
+
+
