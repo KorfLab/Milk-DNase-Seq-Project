@@ -360,10 +360,36 @@ rm 8Lvr_20_GTCCGC_L007_R1_001_processed.fastq 8Lvr_50_GTGAAA_L007_R1_001_process
 4. `cd Packages/Bowtie2`
 5. `ln -s 1d0bc49125 current`
 6. `cd current`
-7. `cd /share/tamu/Packages/Bowtie2/current/`
 8. `make all`
 8. No errors reported at this point, so…
 9. `cd /share/tamu/bin`
 10. `ln -s ../Packages/Bowtie2/current/bowtie2`
 
 
+## Installing BWA (version 0.7.10) ##
+
+1. Downloaded from http://sourceforge.net/projects/bio-bwa/files/bwa-0.7.10.tar.bz2/download
+2. `mkdir -p Packages/BWA`
+3. Use `scp` to copy downloaded BWA directory to `Packages/BWA/`
+4. `cd Packages/BWA`
+5. `bunzip2 bwa-0.7.10.tar.bz2`
+6. `tar -xvf bwa-0.7.10.tar`
+7. `ln -s bwa-0.7.10 current` 
+7. `cd current`
+8. `make`
+8. No errors reported at this point, so…
+9. `cd /share/tamu/bin`
+10. `ln -s ../Packages/BWA/current/bwa`
+
+## Installing Aryana (version ?) ##
+
+1. Cloned locally from https://github.com/aryana-aligner/src.git
+2. `mkdir -p Packages/Aryana`
+3. Use `scp` to copy local `scythe` directory to `Packages/Aryana/a2712c0e6b` # use SHA-1 hash for directory name
+4. `cd Packages/Aryana`
+5. `ln -s a2712c0e6b current`
+6. `cd current`
+8. `make`
+8. No errors reported at this point, so…
+9. `cd /share/tamu/bin`
+10. `ln -s ../Packages/Aryana/current/aryana`
