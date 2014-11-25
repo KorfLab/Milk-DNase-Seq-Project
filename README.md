@@ -364,6 +364,7 @@ rm 8Lvr_20_GTCCGC_L007_R1_001_processed.fastq 8Lvr_50_GTGAAA_L007_R1_001_process
 8. No errors reported at this point, so…
 9. `cd /share/tamu/bin`
 10. `ln -s ../Packages/Bowtie2/current/bowtie2`
+11. `ln -s ../Packages/Bowtie2/current/bowtie2-build`
 
 
 ## Installing BWA (version 0.7.10) ##
@@ -381,7 +382,7 @@ rm 8Lvr_20_GTCCGC_L007_R1_001_processed.fastq 8Lvr_50_GTGAAA_L007_R1_001_process
 9. `cd /share/tamu/bin`
 10. `ln -s ../Packages/BWA/current/bwa`
 
-## Installing Aryana (version ?) ##
+## Installing Aryana (version 0.1) ##
 
 1. Cloned locally from https://github.com/aryana-aligner/src.git
 2. `mkdir -p Packages/Aryana`
@@ -393,3 +394,153 @@ rm 8Lvr_20_GTCCGC_L007_R1_001_processed.fastq 8Lvr_50_GTGAAA_L007_R1_001_process
 8. No errors reported at this point, so…
 9. `cd /share/tamu/bin`
 10. `ln -s ../Packages/Aryana/current/aryana`
+
+
+## Testing Bowtie 2 ##
+
+Make test directory and set up links to some reads and target genome (will just use a really small chromosome file for testing): 
+
+```bash
+mkdir /share/tamu/Analysis/Test/Bowtie2_test
+cd /share/tamu/Analysis/Test/Bowtie2_test
+ln -s /share/tamu/Analysis/All_FASTQ_files/1b_10_TGACCA_L008_R1_001_processed.fastq
+cp cp /share/tamu/Data/Genomes/Mouse/mm9/chromosomes/chr19.fa.gz .
+gunzip chr19.fa.gz
+```
+
+First step is to use `bowtie2-build` to make an index from our reference sequence(s):
+```bash
+bowtie2-build chr19.fa test_index
+```
+
+For a small reference file, this took ~2.5 minutes and ends up producing:
+
+```bash
+s -l
+total 150013
+lrwxrwxrwx  1 keith keith       77 Nov 23 06:13 1b_10_TGACCA_L008_R1_001_processed.fastq -> /share/tamu/Analysis/All_FASTQ_files/1b_10_TGACCA_L008_R1_001_processed.fastq
+-rw-r--r--+ 1 keith keith 62569286 Nov 23 07:33 chr19.fa
+-rw-r--r--+ 1 keith keith 23575307 Nov 23 07:35 test_index.1.bt2
+-rw-r--r--+ 1 keith keith 14535564 Nov 23 07:35 test_index.2.bt2
+-rw-r--r--+ 1 keith keith       44 Nov 23 07:34 test_index.3.bt2
+-rw-r--r--+ 1 keith keith 14535558 Nov 23 07:34 test_index.4.bt2
+-rw-r--r--+ 1 keith keith 23575307 Nov 23 07:36 test_index.rev.1.bt2
+-rw-r--r--+ 1 keith keith 14535564 Nov 23 07:36 test_index.rev.2.bt2
+```
+
+Main run options use -x for index prefix name, -U for filename(s) of unpaired read data, -p for number of processors, and -S for SAM output file name. So for our first test run:
+
+```bash
+time bowtie2 -x test_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -S test_output.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    3367827 (85.09%) aligned 0 times
+    126726 (3.20%) aligned exactly 1 time
+    463366 (11.71%) aligned >1 times
+14.91% overall alignment rate
+
+real    1m48.851s
+user    6m57.508s
+sys     0m7.825s
+``` 
+
+By default, bowtie looks for multiple distinct, valid alignments but reports only the best one. Can use -k <N> option to produce results for N best matches or -a mode to report on all matches. Let's investigate difference in final output when we use -k = 2, 5, or 10 and the -a option:
+
+```bash
+time bowtie2 -x test_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -k 2 -S test_output_k2.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    3365308 (85.03%) aligned 0 times
+    126304 (3.19%) aligned exactly 1 time
+    466307 (11.78%) aligned >1 times
+14.97% overall alignment rate
+
+real    1m24.787s
+
+
+time bowtie2 -x test_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -k 5 -S test_output_k2.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    3362694 (84.96%) aligned 0 times
+    126127 (3.19%) aligned exactly 1 time
+    469098 (11.85%) aligned >1 times
+15.04% overall alignment rate
+
+real    1m51.474s
+
+
+time bowtie2 -x test_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -k 10 -S test_output_k10.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    3361257 (84.92%) aligned 0 times
+    126034 (3.18%) aligned exactly 1 time
+    470628 (11.89%) aligned >1 times
+15.08% overall alignment rate
+
+real    2m28.565s
+
+```
+
+I abandoned the -a option after about 20 hours as it hadn't finished and the output SAM file had grown to over 12 GB. Increasing value of -k, also resuts in larger output file sizes:
+
+```bash
+ls -lh *.sam
+-rw-r--r--+ 1 keith keith 683M Nov 23 07:41 test_output.sam
+-rw-r--r--+ 1 keith keith 794M Nov 23 07:57 test_output_k2.sam
+-rw-r--r--+ 1 keith keith 1.1G Nov 23 08:00 test_output_k5.sam
+-rw-r--r--+ 1 keith keith 1.6G Nov 23 08:02 test_output_k10.sam
+-rw-r--r--+ 1 keith keith  12G Nov 24 04:04 test_output_a.sam
+```
+
+
+
+## Make Bowtie 2 index for all Mouse chromosome files ##
+
+```bash
+qlogin 
+cd /share/tamu/Data/
+mkdir Bowtie2_indexes
+cd Bowtie2_indexes/
+cp /share/tamu/Data/Genomes/Mouse/mm9/chromosomes/*.fa.gz .
+gunzip *.fa.gz
+time bowtie2-build chr10.fa,chr11.fa,chr12.fa,chr13.fa,chr13_random.fa,chr14.fa,chr15.fa,chr16.fa,chr16_random.fa,chr17.fa,chr17_random.fa,chr18.fa,chr19.fa,chr1.fa,chr1_random.fa,chr2.fa,chr3.fa,chr3_random.fa,chr4.fa,chr4_random.fa,chr5.fa,chr5_random.fa,chr6.fa,chr7.fa,chr7_random.fa,chr8.fa,chr8_random.fa,chr9.fa,chr9_random.fa,chrM.fa,chrUn_random.fa,chrX.fa,chrX_random.fa,chrY.fa,chrY_random.fa mm9_index
+
+rm -f *.fa
+cp /share/tamu/Data/Genomes/Mouse/mm9/chromosomes/*.fa.gz .
+gunzip *.fa.gz
+cat *.fa > all.fa
+time bowtie2-build all.fa mm10_index
+rm -f *.fa
+exit
+```
+
+Takes about 4 hours for each version of the genome
+
+
+## Test of Bowtie against full (mm9 and mm10) genomes ##
+
+If search for 1 FASTQ file against 1 chromosome only takes ~2 minutes, now want to see how this changes against the full genome:
+
+```bash
+bowtie2 -x /share/tamu/Data/Bowtie2_indexes/mm9_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -S test_output_mm9.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    182533 (4.61%) aligned 0 times
+    2694414 (68.08%) aligned exactly 1 time
+    1080972 (27.31%) aligned >1 times
+95.39% overall alignment rate
+
+bowtie2 -x /share/tamu/Data/Bowtie2_indexes/mm10_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -S test_output_mm10.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    174969 (4.42%) aligned 0 times
+    2694299 (68.07%) aligned exactly 1 time
+    1088651 (27.51%) aligned >1 times
+95.58% overall alignment rate```bash
+````
+
+Surprisingly, this only took about 7.5 minutes for the 1 FASTQ file. Note that mm10 has slightly higher overall alignment rate.
+
+
+Want to test --local option
+
