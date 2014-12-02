@@ -536,11 +536,134 @@ bowtie2 -x /share/tamu/Data/Bowtie2_indexes/mm10_index -U 1b_10_TGACCA_L008_R1_0
     174969 (4.42%) aligned 0 times
     2694299 (68.07%) aligned exactly 1 time
     1088651 (27.51%) aligned >1 times
-95.58% overall alignment rate```bash
-````
+95.58% overall alignment rate
+```
+
 
 Surprisingly, this only took about 7.5 minutes for the 1 FASTQ file. Note that mm10 has slightly higher overall alignment rate.
 
+Now let's see what difference the `--very-sensitive` option makes (this is a synonym for `-D 20 -R 3 -N 0 -L 20 -i S,1,0.50` options) and should be slower.
 
-Want to test --local option
+```bash
+bowtie2 -x /share/tamu/Data/Bowtie2_indexes/mm9_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 --very-sensitive -S test_output_mm9_vs.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    161035 (4.07%) aligned 0 times
+    2670520 (67.47%) aligned exactly 1 time
+    1126364 (28.46%) aligned >1 times
+95.93% overall alignment rate
 
+bowtie2 -x /share/tamu/Data/Bowtie2_indexes/mm10_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 --very-sensitive -S test_output_mm10_vs.sam
+3957919 reads; of these:
+  3957919 (100.00%) were unpaired; of these:
+    155621 (3.93%) aligned 0 times
+    2670058 (67.46%) aligned exactly 1 time
+    1132240 (28.61%) aligned >1 times
+96.07% overall alignment rate
+```
+
+This takes about 11 minutes per run (compared to 7.5 for default parameters) and increases the overall alignment rate (95.39 -> 95.93% for mm9, 95.58 -> 96.07% for mm10).
+
+
+
+### Distribution of mapping quality scores in mm10 ###
+
+SAM format uses scores from 0 to 42 for mapping quality, where the score is a function of the probability that the mapping was wrong (though not all tools may be calculating probability in a way that makes sense, see [this post](http://biofinysics.blogspot.com/2014/05/the-slow-death-of-term-uniquely.html). Higher scores are better.
+
+```bash
+test_output_mm10.sam | cut -f 5 | sort | uniq -c | sort -nk 2
+ 260715 0
+ 574893 1
+   8584 2
+   8729 3
+   1789 4
+   1927 5
+  14425 6
+  18143 7
+  10330 8
+   2002 11
+    440 12
+   3182 14
+   9048 15
+   5756 16
+    132 17
+    243 18
+    336 21
+   4662 22
+   8339 23
+  37122 24
+    349 25
+   4950 26
+   2251 27
+ 140363 30
+   3971 31
+  24658 32
+    199 33
+  10203 34
+  26707 35
+  19488 36
+  33489 37
+  33667 38
+  63795 39
+  15758 40
+2607274 42
+```
+
+Not sure if we will want to filter out some of the matches with scores < 42.
+From a [great blog post](http://biofinysics.blogspot.com/2014/05/how-does-bowtie2-assign-mapq-scores.html) on filtering MAPQ scores in Bowtie 2 output:
+
+>If someone wanted to exclude "true multireads" from their data set, using MAPQ >= 2 would work. This would also exclude any uniquely mapping reads with >=4 mismatches over high quality bases. In terms of high quality bases and unireads, MAPQ >= 3 allows up to 3 mismatches, MAPQ >= 23 allows up to 2 mismatches, MAPQ >= 40 allows up to 1 mismatch, and MAPQ >= 42 allows 0 mismatches. There will also be other "maxireads" in most or all of these sets.
+
+
+### Bowtie output options to consider using ###
+
+`--no-unal` suppress reads that don't align
+`--no-hd` suppress SAM header lines
+`--omit-sec-seq` replace sequence and quality fields with asterisks (but only for secondary alignments)
+
+
+# Main run of Bowtie 2 against mm9 and mm10 #
+
+I will use a Makefile strategy again which will generate 2 SAM files for each input FASTQ file (1 for mm9 and 1 for mm10). Can't decide whether to keep information on non-aligning reads (as a) I won't be using them for anything and b) they take up disk space) or just omit. Will still need some post-processing steps to decide what to do with reads with low MAPQ scores.
+
+I made a simple bash script (`/share/tamu/Code/run_bowtie2.sh`) which is just a wrapper around the `run_bowtie2.mk` make file. Can then submit this job to the queue with qsub command:
+
+```bash
+qsub -S /bin/bash -pe threaded 2 -M keith@bradnam.co /share/tamu/Code/run_bowtie2.sh
+```
+
+This didn't seem to work as planned. In the end I made a simple Perl wrapper script (`/share/tamu/Code/run_bowtie2.pl`) to submit all 236 jobs as single-threaded bowtie2 runs. This filled up the cluster queue with 1 job per file to be processed. It seemed to start very slowly, but sped up in the end (finished within ~2 days). As well as the main SAM file for each processed FASTQ file, this script also captures standard error from Bowtie 2 into *.err files (these contain summary mapping statistics). There is also an output file from the qsub process (`bowtie2.*`) which were all empty as output files were specified as part of the `bowtie2` command.
+
+## Cleaning up ##
+
+After this step, I could gzip the processed fastq files from earlier, and remove the empty bowtie2 qsub output files.
+
+```bash
+rm -f bowtie2.*
+gzip *processed.fastq
+```
+
+
+# Queue management tips #
+
+Request a node with 32G of memory: `qlogin -l h_vmem=32G`
+
+See your jobs that are running: `qstat`
+See your jobs plus information for all nodes: `qstat -f`
+As above but show details for all users: `qstat -f -u '*'`
+See summary of cluster queues: `qstat -g c`
+
+List parallel environments that are available: `qconf -spl`
+
+
+# Generating summary output from bowtie2 #
+
+Want a Perl script that will:
+
++ process all *.err files and combine read/mapping counts for each sample (represented by several outptu files)
++ process SAM files to maybe make 2–3 counts of mapped reads based on MAPQ score (with sucessive levels of filtering)
+
+Want to know whether any sample has a particular bias:
+
++ in total number of reads
++ in percentage of reads mapped
