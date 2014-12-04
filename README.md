@@ -506,7 +506,7 @@ gunzip *.fa.gz
 time bowtie2-build chr10.fa,chr11.fa,chr12.fa,chr13.fa,chr13_random.fa,chr14.fa,chr15.fa,chr16.fa,chr16_random.fa,chr17.fa,chr17_random.fa,chr18.fa,chr19.fa,chr1.fa,chr1_random.fa,chr2.fa,chr3.fa,chr3_random.fa,chr4.fa,chr4_random.fa,chr5.fa,chr5_random.fa,chr6.fa,chr7.fa,chr7_random.fa,chr8.fa,chr8_random.fa,chr9.fa,chr9_random.fa,chrM.fa,chrUn_random.fa,chrX.fa,chrX_random.fa,chrY.fa,chrY_random.fa mm9_index
 
 rm -f *.fa
-cp /share/tamu/Data/Genomes/Mouse/mm9/chromosomes/*.fa.gz .
+cp /share/tamu/Data/Genomes/Mouse/mm10/chromosomes/*.fa.gz .
 gunzip *.fa.gz
 cat *.fa > all.fa
 time bowtie2-build all.fa mm10_index
@@ -660,10 +660,33 @@ List parallel environments that are available: `qconf -spl`
 
 Want a Perl script that will:
 
-+ process all *.err files and combine read/mapping counts for each sample (represented by several outptu files)
++ process all *.err files and combine read/mapping counts for each sample (represented by several output files)
 + process SAM files to maybe make 2–3 counts of mapped reads based on MAPQ score (with sucessive levels of filtering)
 
 Want to know whether any sample has a particular bias:
 
 + in total number of reads
 + in percentage of reads mapped
+
+Also want to know how different mapping results are to mm9 vs mm10.
+
+```bash
+qlogin
+generate_bowtie2_summary_stats.pl > bowtie_summary_stats.tsv
+```
+
+# Quality control #
+
+A range of MAPQ scores are present (see earlier section) between zero (worst score possible) and 42 (best score possible). From inspection of SAM file (particularly alignment score field (AS:i), alternative alignment score (XS:i), and number of mismatches (XM:i), you can start to get a feel for what these lower MAPQ scores relate to.
+
++ You can have 1-3 mismatches but still get a MAPQ score of 42 (alignment score drops from zero to -2 through to -6)
++ MAPQ scores at 39 or lower start to have secondary alignments (XS:i field is present)
++ MAPQ scores >23 never have more than 3 mismatches
++ MAPQ scores of 23 can have 1–5 mismatches
++ MAPQ scores of 2 or lower can have 6-9 mismatches
+
+Will keep alignments of 24 of better and will also combine SAM output from multiple SAM files from each sample. Finally, we will just use mm10 for now, rather than duplicating everything. Use a Perl script:
+
+```bash
+/share/tamu/Code/filter_sam_files.pl 24
+```
