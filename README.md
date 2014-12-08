@@ -689,4 +689,18 @@ Will keep alignments of 24 of better and will also combine SAM output from multi
 
 ```bash
 /share/tamu/Code/filter_sam_files.pl 24
+Discarded 82308088 out of 416642306 alignments with MAPQ scores < 24
+```
+
+# Tidy up #
+
+Can now move the processed SAM files into their own directory and zip the original SAM files.
+
+```bash
+cd /share/tamu/Analysis
+mkdir SAM_files
+cd SAM_files
+mv ../All_FASTQ_files/*MAPQ24.sam .
+cd ../share/tamu/Analysis/All_FASTQ_files
+gzip *.sam
 ```
