@@ -11,209 +11,144 @@
 
 use strict;
 use warnings FATAL => 'all';
+use FAlite;
+
+die "Usage: $0 <directory of SAM files> <directory of FASTQ files>\n" unless @ARGV == 3;
+
+my ($sam_dir, $fastq_dir, $seqs) = @ARGV;
+
+my $genome_size_mm9  = 2725765481;
+my $genome_size_mm10 = 2730871774;
+my $mapq_threshold = 24;
+
+my %sequence_depth;
 
 
-die "Usage: $0 <directory of SAM files> <directory of pre-processed FASTQ files> <directory of post-processed FASTQ files>\n" unless @ARGV == 3;
-
-my ($sam_dir, $pre_processed_dir, $post_processed_dir) = @ARGV;
-
-
-# mm9:  Total Bases in Assembly 2,745,142,291 Total Non-N Bases in Assembly 2,648,522,751
-# mm10: Total Bases in Assembly 2,798,785,524 Total Non-N Bases in Assembly 2,719,482,043
-# but this doesn't include mitochondrial genome
-
-# read all mm10 SAM files into list and loop over them
-
-my $discarded_alignments = 0;
-my $alignment_counter = 0;
-
-foreach my $file (glob("*mm10.sam")){
-	
+# process the raw fastq files first
+FILE: foreach my $file (glob("$fastq_dir/*.fastq.gz")){
+	#next unless ($file =~ m/8Mg_50/);
 	warn "Processing $file\n";
-	# extract prefix part of file name to get sample ID
-	my ($id, $dnase) = $file =~ m/([A-Za-z0-9]+)_(\d+)/;
 	
-	Inside coding block
+	my $fastq_seq_counter = 0;
 
+	# extract prefix part of file name and the sample ID
+	my ($file_prefix) = $file =~ m/([A-Za-z0-9]+_\d+_[ACGT]*_L\d+_R1_\d+)/;
+	my ($id)          = $file =~ m/([A-Za-z0-9]+_\d+)/;
 
-	open(my $sam, "<", $file) or die "Can't open $file";
-	SAM: while(my $line = <$sam>){
-		$alignment_counter++;
-		my @f = split(/\s+/, $line);
-		my $mapq = $f[4];
+	# is this a raw FASTQ file, or one processed (by Scythe and Sickle)?
+	my $type = 'raw';
+	$type = 'processed' if ($file =~ m/processed/);
 
-		# skip if MAPQ score is too low
-		if ($mapq < $mapq_threshold){
-			$discarded_alignments++;
-			next SAM;
-		} 
+	# process fastq file, just want to know length of line 2 (sequence)
+	open(my $FASTQ, "gunzip -c $file | ") or die "Can't open pipe: $? $!\n";
+ 	FASTQ: while (my $line1 = <$FASTQ>){
+ 		my $line2 = <$FASTQ>;
+		my $line3 = <$FASTQ>;
+		my $line4 = <$FASTQ>;
+		chomp($line2);
+
+		$fastq_seq_counter++;
+		last FASTQ if ($fastq_seq_counter > $seqs);
+
+		# add length to hash		
+		$sequence_depth{$id}{$type} += length($line2);			
 		
-		# now print to correct file handle
 		
-		if ($id eq '1b' and $dnase == 5){
-			print $out1 "$line";
-		} elsif($id eq '1b' and $dnase == 10){
-			print $out2 "$line";	
-		} elsif($id eq '1b' and $dnase == 50){
-			print $out3 "$line";	
-		} elsif($id eq '2' and $dnase == 10){
-			print $out4 "$line";	
-		} elsif($id eq '2' and $dnase == 20){
-			print $out5 "$line";	
-		} elsif($id eq '2' and $dnase == 50){
-			print $out6 "$line";	
-		} elsif($id eq '8Lvr' and $dnase == 10){
-			print $out7 "$line";	
-		} elsif($id eq '8Lvr' and $dnase == 20){
-			print $out8 "$line";	
-		} elsif($id eq '8Lvr' and $dnase == 50){
-			print $out9 "$line";	
-		} elsif($id eq '8Mg' and $dnase == 5){
-			print $out10 "$line";	
-		} elsif($id eq '8Mg' and $dnase == 10){
-			print $out11 "$line";	
-		} elsif($id eq '8Mg' and $dnase == 20){
-			print $out12 "$line";	
-		} elsif($id eq '8Mg' and $dnase == 50){
-			print $out13 "$line";	
-		} elsif($id eq '16P' and $dnase == 5){
-			print $out14 "$line";	
-		} elsif($id eq '16P' and $dnase == 10){
-			print $out15 "$line";	
-		} elsif($id eq '16P' and $dnase == 20){
-			print $out16 "$line";	
-		} elsif($id eq '16P' and $dnase == 50){
-			print $out17 "$line";	
-		} else {
-			die "Shouldn't get here!\n$line\n";
-		}
-		
+    }
+    close($FASTQ);
+
+    # now open equivalent SAM files (but only do this for each raw FASTQ file)
+    # don't want to process files twice 
+    next FILE if ($type eq 'processed');
+    my $sam_file_mm9  = $file_prefix . "_mm9.sam.gz";
+	my $sam_file_mm10 = $file_prefix . "_mm10.sam.gz";
+
+	foreach my $sam_file ($sam_file_mm9, $sam_file_mm10){
+		warn "Processing $sam_file\n";
+		process_sam_file($sam_file, $id);
 	}
-	close($sam);
+
 }
 
-warn "Discarded $discarded_alignments out of $alignment_counter alignments with MAPQ scores < $mapq_threshold\n";
+# level of precision for coverage values
+my $precision = 5;
 
+# print out final coverage values for raw and processed sequences
+# and for mm9 and mm10
+# and for various levels of SAM filtering (only high MAPQ scores and non-ChrM mappings)
 
+print "ID\t";
+print "Raw_coverage_mm9\tProcessed_coverage_mm9\tSAM_mm9\tSAM_mm9_MAPQ\tSAM_mm9_non_M\t";
+print "Raw_coverage_mm10\tProcessed_coverage_mm10\tSAM_mm10\tSAM_mm10_MAPQ\tSAM_mm10_non_M\n";
 
-close($out1);
-close($out2);
-close($out3);
-close($out4);
-close($out5);
-close($out6);
-close($out7);
-close($out8);
-close($out9);
-close($out10);
-close($out11);
-close($out12);
-close($out13);
-close($out14);
-close($out15);
-close($out16);
-close($out17);
+foreach my $id (sort keys %sequence_depth){
+	my $raw_depth            = $sequence_depth{$id}{raw};
+	my $processed_depth      = $sequence_depth{$id}{processed};
+	my $raw_sam_depth_mm9    = $sequence_depth{$id}{sam_raw}{mm9};
+	my $raw_sam_depth_mm10   = $sequence_depth{$id}{sam_raw}{mm10};
+	my $sam_depth_mapq_mm9   = $sequence_depth{$id}{sam_high_mapq}{mm9};
+	my $sam_depth_mapq_mm10  = $sequence_depth{$id}{sam_high_mapq}{mm10};
+	my $sam_depth_non_M_mm9  = $sequence_depth{$id}{sam_high_mapq_non_chrM}{mm9};
+	my $sam_depth_non_M_mm10 = $sequence_depth{$id}{sam_high_mapq_non_chrM}{mm10};
 
+	# print "$raw_depth\t$processed_depth\t$raw_sam_depth_mm9\t$sam_depth_mapq_mm9\t$sam_depth_non_M_mm9\n";
+	# print "$raw_depth\t$processed_depth\t$raw_sam_depth_mm10\t$sam_depth_mapq_mm10\t$sam_depth_non_M_mm10\n";
+	# exit;
 
-# read all err files into list and loop over them
+	my $raw_coverage_mm9         = sprintf("%.${precision}f", $raw_depth / $genome_size_mm9); 
+	my $processed_coverage_mm9   = sprintf("%.${precision}f", $processed_depth / $genome_size_mm9); 
+	my $raw_sam_coverage_mm9     = sprintf("%.${precision}f", $raw_sam_depth_mm9 / $genome_size_mm9); 
+	my $sam_mapq_coverage_mm9    = sprintf("%.${precision}f", $sam_depth_mapq_mm9 / $genome_size_mm9); 
+	my $sam_non_M_coverage_mm9   = sprintf("%.${precision}f", $sam_depth_non_M_mm9 / $genome_size_mm9); 
 
-foreach my $file (glob("*.err")){
-	
-	warn "Processing $file\n";
-	# extract prefix part of file name to get sample ID
-	my ($id, $dnase) = $file =~ m/([A-Za-z0-9]+)_(\d+)/;
-	my ($mouse_ver)  = $file  =~ m/(mm\d+)/;
+	my $raw_coverage_mm10        = sprintf("%.${precision}f", $raw_depth / $genome_size_mm10); 
+	my $processed_coverage_mm10  = sprintf("%.${precision}f", $processed_depth / $genome_size_mm10); 
+	my $raw_sam_coverage_mm10    = sprintf("%.${precision}f", $raw_sam_depth_mm10 / $genome_size_mm10); 
+	my $sam_mapq_coverage_mm10   = sprintf("%.${precision}f", $sam_depth_mapq_mm10 / $genome_size_mm10); 
+	my $sam_non_M_coverage_mm10  = sprintf("%.${precision}f", $sam_depth_non_M_mm10 / $genome_size_mm10); 
 
-	
-	# now open err file and grab details to add to hash
-	open(my $in, "<", $file) or die "Can't open $file";
-
-	# only six lines per file, want info from four of them
-	my $line1 = <$in>;
-	my $line2 = <$in>;
-	my $line3 = <$in>;
-	my $line4 = <$in>;
-	my $line5 = <$in>;
-	
-	my ($read_count)   = $line1 =~ m/(\d+) reads/;
-	my ($unaligned)    = $line3 =~ m/(\d+) \(/;
-	my ($aligned_once) = $line4 =~ m/(\d+) \(/;
-	my ($aligned_many) = $line5 =~ m/(\d+) \(/;
-		
-	$bowtie2_stats{$id}{$dnase}{$mouse_ver}{read_count}   += $read_count;
-	$bowtie2_stats{$id}{$dnase}{$mouse_ver}{unaligned}    += $unaligned;	
-	$bowtie2_stats{$id}{$dnase}{$mouse_ver}{aligned_once} += $aligned_once;
-	$bowtie2_stats{$id}{$dnase}{$mouse_ver}{aligned_many} += $aligned_many;
-	close($in);
-	
-	# now process equivalent sam file to get to MAPQ scores
-	my $sam_file = $file;
-	$sam_file =~ s/err/sam/;
-	warn "Processing $sam_file\n";
-	open(my $sam, "<", $sam_file) or die "Can't open $sam_file";
-	while(my $line = <$sam>){
-		my @f = split(/\s+/, $line);
-		my $mapq = $f[4];
-		# add to main hash based on MAPQ score
-		# categories taken from http://biofinysics.blogspot.com/2014/05/how-does-bowtie2-assign-mapq-scores.html
-		# may only want to keep reads with max score of 42
-		if ($mapq == 42){
-			$bowtie2_stats{$id}{$dnase}{$mouse_ver}{mapq_42}++;
-		} elsif ($mapq >= 40){
-			$bowtie2_stats{$id}{$dnase}{$mouse_ver}{mapq_40_41}++;		
-		} elsif ($mapq >= 23){
-			$bowtie2_stats{$id}{$dnase}{$mouse_ver}{mapq_23_39}++;		
-		} elsif ($mapq >= 3){
-			$bowtie2_stats{$id}{$dnase}{$mouse_ver}{mapq_3_22}++;		
-		} elsif ($mapq >= 2){
-			$bowtie2_stats{$id}{$dnase}{$mouse_ver}{mapq_2}++;		
-		}else{
-			$bowtie2_stats{$id}{$dnase}{$mouse_ver}{mapq_1}++;		
-		}
-	}
-	close($sam);
+	# final output
+	print "$id\t";
+	print "$raw_coverage_mm9\t$processed_coverage_mm9\t";
+	print "$raw_sam_coverage_mm9\t$sam_mapq_coverage_mm9\t$sam_non_M_coverage_mm9\t";
+	print "$raw_coverage_mm10\t$processed_coverage_mm10\t";
+	print "$raw_sam_coverage_mm10\t$sam_mapq_coverage_mm10\t$sam_non_M_coverage_mm10\t";
+	print "\n";
 }
 
-# report on stats pooled for each sample for each genome version
-print "ID\tDNAse_concentration\t";
-print "Number_of_reads_mm9\t%_aligned_mm9\t";
-print "%_MAPQ=42_mm9\t$%_MAPQ=1_mm9\t";
-
-print "Number_of_reads_mm10\t%_aligned_mm10\t";
-print "%_MAPQ=42_mm10\t$%_MAPQ=1_mm10\t";
-
-print "\n";
-
-foreach my $id (sort keys %bowtie2_stats){
-	
-	foreach my $dnase (sort {$a <=> $b} keys %{$bowtie2_stats{$id}}){
-	
-		print "$id\t$dnase\t";
-		print "$bowtie2_stats{$id}{$dnase}{mm9}{read_count}\t";
-		my $percent_aligned = sprintf("%.2f", ($bowtie2_stats{$id}{$dnase}{mm9}{aligned_once} + $bowtie2_stats{$id}{$dnase}{mm9}{aligned_many}) / $bowtie2_stats{$id}{$dnase}{mm9}{read_count} * 100);
-		print "$percent_aligned\t";
-	
-		# print mapping percentages for some MAPQ score categories
-		my $percent_42 = sprintf("%.2f", $bowtie2_stats{$id}{$dnase}{mm9}{mapq_42} / $bowtie2_stats{$id}{$dnase}{mm9}{read_count} * 100);
-		print "$percent_42\t";
-
-		my $percent_1 = sprintf("%.2f", $bowtie2_stats{$id}{$dnase}{mm9}{mapq_1} / $bowtie2_stats{$id}{$dnase}{mm9}{read_count} * 100);
-		print "$percent_1\t";
-
-
-		print "$bowtie2_stats{$id}{$dnase}{mm10}{read_count}\t";
-		$percent_aligned = sprintf("%.2f", ($bowtie2_stats{$id}{$dnase}{mm10}{aligned_once} + $bowtie2_stats{$id}{$dnase}{mm10}{aligned_many}) / $bowtie2_stats{$id}{$dnase}{mm10}{read_count} * 100);
-		print "$percent_aligned\t";
-
-
-		# print mapping percentages for some MAPQ score categories
-		$percent_42 = sprintf("%.2f", $bowtie2_stats{$id}{$dnase}{mm10}{mapq_42} / $bowtie2_stats{$id}{$dnase}{mm10}{read_count} * 100);
-		print "$percent_42\t";
-
-		$percent_1 = sprintf("%.2f", $bowtie2_stats{$id}{$dnase}{mm10}{mapq_1} / $bowtie2_stats{$id}{$dnase}{mm10}{read_count} * 100);
-		print "$percent_1\t";
-
-		print "\n";
-	}
-}
 exit;
+
+
+### subroutines
+sub process_sam_file{
+	my ($sam_file, $id) = @_;
+	
+	my $line_counter = 0;
+
+	my $mouse_ver;
+	$mouse_ver = 'mm9'  if ($sam_file =~ m/mm9/);
+	$mouse_ver = 'mm10' if ($sam_file =~ m/mm10/);
+	open(my $sam, "gunzip -c $sam_file | ") or die "Can't open pipe: $? $!\n";
+	
+	SAM: while(my $line = <$sam>){
+		$line_counter++;
+		last SAM if ($line_counter > $seqs);
+			
+	 	my @f = split(/\s+/, $line);
+		my ($chr, $mapq, $sequence) = ($f[2], $f[4], $f[9]);
+		my $seq_length = length($sequence);
+		
+		$sequence_depth{$id}{sam_raw}{$mouse_ver} += $seq_length;
+		
+		# also store results for high quality mappings
+		# and then non-ChrM matches
+		if ($mapq > $mapq_threshold){
+			$sequence_depth{$id}{sam_high_mapq}{$mouse_ver} += $seq_length;
+
+			if ($chr ne 'chrM'){
+				$sequence_depth{$id}{sam_high_mapq_non_chrM}{$mouse_ver} += $seq_length;
+			}
+		}		
+	}
+	close($sam);
+}
