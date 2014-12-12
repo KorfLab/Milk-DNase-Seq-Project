@@ -704,3 +704,85 @@ mv ../All_FASTQ_files/*MAPQ24.sam .
 cd ../share/tamu/Analysis/All_FASTQ_files
 gzip *.sam
 ```
+
+# Look at sequence coverage of genome #
+
+Wrote a Perl script that looks at coverage of target genomes (mm9 and mm10) in terms of:
+
+1. Ratio of total length of FASTQ reads to target genome size
+2. Ratio of total length of trimmed FASTQ reads to target genome size
+3. Ratio of total length of mapped reads in SAM file to target genome size
+4. Ratio of total length of mapped reads with MAPQ > 23 in SAM file to target genome size
+5. Ratio of total length of mapped reads with MAPQ > 23 in SAM file, and which do not map to mitochondrial genome to target genome size
+
+Script prints all output to standard output:
+
+`calculate_coverage.pl . . 1060000000 > coverage_mm9_mm10.tsv`
+
+These results tell us that different samples lose differing amounts of coverage at each successive step of calculating coverage, and that raw coverage is not always a reliable indicator of useful coverage.r
+
+# Look at local sequence coverage #
+
+For testing purposes I will just take mapped SAM reads from one chromosome (chromosome 16, which is just over 98 Mbp).
+
+```bash
+cd /share/tamu/Analysis/SAM_files/
+sam_filter.pl chr16 .
+```
+
+Now we have some data files that vary in size (that is somewhat related to their overall genomic level of coverage):
+
+```bash
+wc -l *chr16.sam
+    734675 16P_10_mm10_MAPQ24_chr16.sam
+    737466 16P_20_mm10_MAPQ24_chr16.sam
+    789183 16P_50_mm10_MAPQ24_chr16.sam
+    858351 16P_5_mm10_MAPQ24_chr16.sam
+    475193 1b_10_mm10_MAPQ24_chr16.sam
+   1048976 1b_50_mm10_MAPQ24_chr16.sam
+    479312 1b_5_mm10_MAPQ24_chr16.sam
+    394149 2_10_mm10_MAPQ24_chr16.sam
+    962704 2_20_mm10_MAPQ24_chr16.sam
+   1022133 2_50_mm10_MAPQ24_chr16.sam
+    218232 8Lvr_10_mm10_MAPQ24_chr16.sam
+    489752 8Lvr_20_mm10_MAPQ24_chr16.sam
+    470939 8Lvr_50_mm10_MAPQ24_chr16.sam
+    465677 8Mg_10_mm10_MAPQ24_chr16.sam
+```
+
+Wrote Perl script that can count reads in bins of different sizes. E.g.
+
+```bash
+read_depth.pl 100 0 1b_50_mm10_MAPQ24_chr16.sam > output.tsv
+```
+
+First parameter is bin size (bp) second parameter is a threshold value (only report bins with this many reads). Then wrote simple wrapper script to make repeated calls of `read_depth.pl`:
+
+```bash
+wrapper.pl 100
+
+ls -1 *bin100.tsv
+16P_10_mm10_MAPQ24_bin100.tsv
+16P_20_mm10_MAPQ24_bin100.tsv
+16P_50_mm10_MAPQ24_bin100.tsv
+16P_5_mm10_MAPQ24_bin100.tsv
+1b_10_mm10_MAPQ24_bin100.tsv
+1b_50_mm10_MAPQ24_bin100.tsv
+1b_5_mm10_MAPQ24_bin100.tsv
+2_10_mm10_MAPQ24_bin100.tsv
+2_20_mm10_MAPQ24_bin100.tsv
+2_50_mm10_MAPQ24_bin100.tsv
+8Lvr_10_mm10_MAPQ24_bin100.tsv
+8Lvr_20_mm10_MAPQ24_bin100.tsv
+8Lvr_50_mm10_MAPQ24_bin100.tsv
+8Mg_10_mm10_MAPQ24_bin100.tsv
+8Mg_20_mm10_MAPQ24_bin100.tsv
+8Mg_50_mm10_MAPQ24_bin100.tsv
+8Mg_5_mm10_MAPQ24_bin100.tsv
+```
+
+Want to grab a region of interest from Chromosome 5 from all of these files (a region around casein genes):
+
+```bash
+grep -w chr5 *bin100.tsv | grep -E "8[8-9][0-9][0-9][0-9][0-9][0-9][0-9]" | sed 's/_bin100.tsv:chr5//' > chr5_region_of_interest.tsv
+```
