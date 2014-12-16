@@ -705,8 +705,9 @@ cd ../share/tamu/Analysis/All_FASTQ_files
 gzip *.sam
 ```
 
-# Look at sequence coverage of genome #
+# Look at sequence coverage of mouse genome #
 
+## Look at global coverage of genome##
 Wrote a Perl script that looks at coverage of target genomes (mm9 and mm10) in terms of:
 
 1. Ratio of total length of FASTQ reads to target genome size
@@ -721,7 +722,7 @@ Script prints all output to standard output:
 
 These results tell us that different samples lose differing amounts of coverage at each successive step of calculating coverage, and that raw coverage is not always a reliable indicator of useful coverage.r
 
-# Look at local sequence coverage #
+## Look at local coverage of genome ##
 
 For testing purposes I will just take mapped SAM reads from one chromosome (chromosome 16, which is just over 98 Mbp).
 
@@ -786,3 +787,25 @@ Want to grab a region of interest from Chromosome 5 from all of these files (a r
 ```bash
 grep -w chr5 *bin100.tsv | grep -E "8[8-9][0-9][0-9][0-9][0-9][0-9][0-9]" | sed 's/_bin100.tsv:chr5//' > chr5_region_of_interest.tsv
 ```
+
+
+# Remap STAT5 Chip-Seq peak data from mm9 to mm10 #
+
+Used the [NCBI remapping service](http://www.ncbi.nlm.nih.gov/genome/tools/remap) to remap the peak data from STAT5 (currently mapped to mm9) to mm10 version of mouse genome. When remapping, I deselected the option for 'Allow multiple locations to be returned' else you end up with some peaks mapped to two locations (the 2nd location being an alternative locus).
+
+The two remapped BED files were saved in `/share/tamu/Data/DNase-Seq/Mouse/STAT5_tracks`. Remapped files lose their score information in 5th column of BED file.
+
+
+# Assess fit of DNase-Seq data to peaks from STAT5 data #
+
+Want to make [ROC curves](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) in order to work out which DNase concentration works best for each sample tissue.
+
++ True positive rate = percentage of nucleotides within STAT5A sites that have counts above the threshold. 
++ False positive rate = percentage of nucleotides within non-expressed protein coding genes that have counts above the threshold. 
+
+Repeat with varying threshold values; each threshold provides a point on the ROC curve.
+
+
+
+
+

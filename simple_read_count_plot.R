@@ -86,39 +86,40 @@ title(main="8Mg_50_mm10_MAPQ24_chr16")
 # make large bottom outer margin
 par(oma = c(7, 3, 1, 1))
 
+
+#################################
+# Plot 9: 8Mg_5_mm10_MAPQ24_chr16 1,000 vs 100 bp bin sizes
+#################################
 # set layout of a 2x1 plot (and reduce margins of indvididual plots)
 par(mfrow=c(2,1))
 
-#################################
-# Plot 9: 8Mg_5_mm10_MAPQ24_chr16
-#################################
+
 data = read.table("Results/8Mg_5_mm10_MAPQ24_chr16_read_counts.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
 plot(x=data$V2,  y=data$V4, type="l",  xlim=c(10000000, 15000000), ylim=c(0,600), xlab=NA, lwd = 3, ylab=NA, col="red")
 par(new=TRUE)
-title(main="8Mg_50_mm10_MAPQ24_chr16_10-15_Mbp Bin size = 1,000 bp")
+title(main="8Mg_5_mm10_MAPQ24_chr16_10-15_Mbp Bin size = 1,000 bp")
 
 
 data = read.table("Results/8Mg_5_mm10_MAPQ24_chr16_100_read_counts.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
 plot(x=data$V2,  y=data$V4, type="l",  xlim=c(10000000, 15000000), ylim=c(0,300), xlab=NA, lwd = 3, ylab=NA, col="red")
 par(new=TRUE)
-title(main="8Mg_50_mm10_MAPQ24_chr16_10-15_Mbp Bin size = 100 bp")
+title(main="8Mg_5_mm10_MAPQ24_chr16_10-15_Mbp Bin size = 100 bp")
 
 #################################
-# Plot 10: 8Mg_5_mm10_MAPQ24_chr16
+# Plot 10: 1b_50 vs 8Lvr_10
 #################################
-par(mfrow=c(2,1), mai=c(0.7, 0.8, 0.7, 0.2))
-par(oma = c(7, 3, 1, 1))
-data = read.table("Results/8Mg_5_mm10_MAPQ24_chr16_100_read_counts.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
-plot(x=data$V2,  y=data$V4, type="l",  xlim=c(10000000, 10100000), ylim=c(0,15), xlab=NA, lwd = 3, ylab=NA, col="red")
-par(new=TRUE)
-title(main="8Mg_50_mm10_MAPQ24_chr16 10.0-10.1_Mbp Bin size = 100 bp")
-mtext("At bin sizes 1,000, 100, and 10 bp, % of bins with zero read counts = 13%, 69%, 95%", side=1, outer=T, at=0.5, cex=1.1)
+par(mfrow=c(2,1))
 
-data = read.table("Results/8Mg_5_mm10_MAPQ24_chr16_10_read_counts.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
-plot(x=data$V2,  y=data$V4, type="l",  xlim=c(10000000, 10100000), ylim=c(0,15), xlab=NA, lwd = 3, ylab=NA, col="red")
-par(new=TRUE)
-title(main="8Mg_50_mm10_MAPQ24_chr16 10.0-10.1_Mbp Bin size = 10 bp")
+data = read.table("Results/1b_50_mm10_MAPQ24_chr16_100_read_counts.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
+plot(x=data$V2,  y=data$V4, type="l",  xlim=c(10985000, 11015000), ylim=c(0,30), xlab=NA, lwd = 3, ylab=NA, col="red")
+title(main="1b_50_mm10, bin = 100 bp")
 
+data = read.table("Results/8Lvr_10_mm10_MAPQ24_chr16_100_read_counts.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
+plot(x=data$V2,  y=data$V4, type="l",  xlim=c(10985000, 11015000), ylim=c(0,30), xlab=NA, lwd = 3, ylab=NA, col="red")
+title(main="8Lvr_10_mm10, bin = 100 bp")
+
+
+#mtext("At bin sizes 1,000, 100, and 10 bp, % of bins with zero read counts = 13%, 69%, 95%", side=1, outer=T, at=0.5, cex=1.1)
 
 
 
