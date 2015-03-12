@@ -51,7 +51,7 @@ cat barcodes_in_identifiers.txt
    4689 GGTTCC
    2378 TGTTCC
    
-```bash
+```
 
 Two of these contain an N character in the barcode. Are the non AGTTCC barcodes all part of the official set of barcodes that I extracted above?
 
@@ -254,14 +254,14 @@ With some difficulty, I made a make file that runs Scythe and Sickle on a small 
 
 The details of testing will not be included here.
 
-# Main run of Sickle and Scythe #
+# Main run of Scythe and Sickle #
 
 Make new directory which will contain symbolic links to all FASTQ files and then analysis output files will be created in this directory from subsequent steps.
 
 ```bash
 cd /share/tamu/Analysis
-mkdir All_FASTQ_files
-cd All_FASTQ_files
+mkdir DNase-Seq_FASTQ_files
+cd DNase-Seq_FASTQ_files
 find /share/tamu/Data/DNase-Seq/Mouse/ -type f -name "*.fastq.gz" -exec ln -s {} \;
 ```
 
@@ -330,7 +330,7 @@ Make test directory and set up links to some reads and target genome (will just 
 ```bash
 mkdir /share/tamu/Analysis/Test/Bowtie2_test
 cd /share/tamu/Analysis/Test/Bowtie2_test
-ln -s /share/tamu/Analysis/All_FASTQ_files/1b_10_TGACCA_L008_R1_001_processed.fastq
+ln -s /share/tamu/Analysis/DNase-Seq_FASTQ_files/1b_10_TGACCA_L008_R1_001_processed.fastq
 cp cp /share/tamu/Data/Genomes/Mouse/mm9/chromosomes/chr19.fa.gz .
 gunzip chr19.fa.gz
 ```
@@ -345,7 +345,7 @@ For a small reference file, this took ~2.5 minutes and ends up producing:
 ```bash
 s -l
 total 150013
-lrwxrwxrwx  1 keith keith       77 Nov 23 06:13 1b_10_TGACCA_L008_R1_001_processed.fastq -> /share/tamu/Analysis/All_FASTQ_files/1b_10_TGACCA_L008_R1_001_processed.fastq
+lrwxrwxrwx  1 keith keith       77 Nov 23 06:13 1b_10_TGACCA_L008_R1_001_processed.fastq -> /share/tamu/Analysis/DNase-Seq_FASTQ_files/1b_10_TGACCA_L008_R1_001_processed.fastq
 -rw-r--r--+ 1 keith keith 62569286 Nov 23 07:33 chr19.fa
 -rw-r--r--+ 1 keith keith 23575307 Nov 23 07:35 test_index.1.bt2
 -rw-r--r--+ 1 keith keith 14535564 Nov 23 07:35 test_index.2.bt2
@@ -369,9 +369,10 @@ time bowtie2 -x test_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -S t
 real    1m48.851s
 user    6m57.508s
 sys     0m7.825s
-``` 
+```
 
 By default, bowtie looks for multiple distinct, valid alignments but reports only the best one. Can use -k <N> option to produce results for N best matches or -a mode to report on all matches. Let's investigate difference in final output when we use -k = 2, 5, or 10 and the -a option:
+
 
 ```bash
 time bowtie2 -x test_index -U 1b_10_TGACCA_L008_R1_001_processed.fastq -p 4 -k 2 -S test_output_k2.sam
@@ -408,7 +409,7 @@ real    2m28.565s
 
 ```
 
-I abandoned the -a option after about 20 hours as it hadn't finished and the output SAM file had grown to over 12 GB. Increasing value of -k, also resuts in larger output file sizes:
+I abandoned the -a option after about 20 hours as it hadn't finished and the output SAM file had grown to over 12 GB. Increasing value of -k, also results in larger output file sizes:
 
 ```bash
 ls -lh *.sam
@@ -614,10 +615,10 @@ Can now move the processed SAM files into their own directory and zip the origin
 
 ```bash
 cd /share/tamu/Analysis
-mkdir SAM_files
-cd SAM_files
-mv ../All_FASTQ_files/*MAPQ24.sam .
-cd ../share/tamu/Analysis/All_FASTQ_files
+mkdir DNase-Seq_SAM_files
+cd DNase-Seq_SAM_files
+mv ../DNase-Seq_FASTQ_files/*MAPQ24.sam .
+cd ../share/tamu/Analysis/DNase-Seq_FASTQ_files
 gzip *.sam
 ```
 
@@ -643,7 +644,7 @@ These results tell us that different samples lose differing amounts of coverage 
 For testing purposes I will just take mapped SAM reads from one chromosome (chromosome 16, which is just over 98 Mbp).
 
 ```bash
-cd /share/tamu/Analysis/SAM_files/
+cd /share/tamu/Analysis/DNase-Seq_SAM_files/
 sam_filter.pl chr16 .
 ```
 
@@ -727,9 +728,9 @@ Want to link to all of the unified SAM files from mm10, but not the chr16 specif
 
 ```bash
 cd /share/tamu/Analysis/
-mkdir ROC_data
-cd ROC_data
-find ../SAM_files/ -name *.sam ! -name *chr16.sam -exec ln -s {} \;
+mkdir DNase-Seq_ROC_data
+cd DNase_Seq_ROC_data
+find ../DNase-Seq_SAM_files/ -name *.sam ! -name *chr16.sam -exec ln -s {} \;
 ln -s /share/tamu/Data/DNase-Seq/Mouse/STAT5_tracks/remapped_GSM1005189_L1-AABB-STAT5A_0.001.bed
 ```
 
@@ -742,6 +743,7 @@ There is a [2013 paper by John et al.](http://www.ncbi.nlm.nih.gov/pubmed/238214
 + Genome-scale mapping of DNase I hypersensitivity
 
 In this paper they define a 'SPOT' measure (Signal Portion Of Tags) to assess quality of DNase sample as follows:
+
 
 >We have, therefore, introduced an im- portant quality measure called SPOT (signal portion of tags). SPOT uses tag-enriched regions identified by Hotspot (or any other peak caller) to quantify a “SPOT” score, which is computed as the percentage of all mapped reads that fall within hotspots…
 
@@ -765,11 +767,12 @@ cd /share/tamu/bin
 ln -s ../Packages/PeaKDEck/peakdeck-cap-osx-v1-1-pl.pl peakdeck.pl
 ```
 
+
 ## Set up directory for peak calling ##
 
 ```bash
-mkdir /share/tamu/Analysis/Peak_calling
-cd /share/tamu/Analysis/Peak_calling
+mkdir /share/tamu/Analysis/DNase-Seq_Peak_calling
+cd /share/tamu/Analysis/DNase-Seq_Peak_calling
 ```
 
 First step in using PeaKDEck is to make a file that lists all chromosome names and lengths. Can start by simply take existing output of `chromosome_sizes.pl` script:
@@ -782,11 +785,12 @@ Then edit as appropriate to change the final order.
 
 Test of one SAM file: sort then filter, then run peak caller:
 ```bash
-peakdeck-cap-osx-v1-1-pl.pl -NS 16P_5_mm10_MAPQ24.sam > 16P_5_mm10_MAPQ24_sorted.sam
+ln -s ../DNase-Seq_SAM_files/16P_5_mm10_MAPQ24.sam
+peakdeck.pl -NS 16P_5_mm10_MAPQ24.sam > 16P_5_mm10_MAPQ24_sorted.sam
 
-peakdeck-cap-osx-v1-1-pl.pl -g chromosome_details.tsv -F 16P_5_mm10_MAPQ24_sorted.sam > 16P_5_mm10_MAPQ24_filtered.sam
+peakdeck.pl -g chromosome_details.tsv -F 16P_5_mm10_MAPQ24_sorted.sam > 16P_5_mm10_MAPQ24_filtered.sam
 
-peakdeck-cap-osx-v1-1-pl.pl -g chromosome_details.tsv -P 16P_5_mm10_MAPQ24_filtered.sam > 16P_5_mm10_MAPQ24_peaks.bed
+peakdeck.pl -g chromosome_details.tsv -P 16P_5_mm10_MAPQ24_filtered.sam > 16P_5_mm10_MAPQ24_peaks.bed
 
 ```
 
