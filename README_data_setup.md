@@ -62,8 +62,32 @@ Also note from UCSC Genome site:
 
 >We are pleased to announce the release of a Genome Browser for the June 2014 assembly of cow, Bos taurus (Bos_taurus_UMD 3.1.1, UCSC version bosTau8). This updated cow assembly was provided by the UMD Center for Bioinformatics and Computational Biology (CBCB). This assembly is an update to the previous UMD 3.1 (bosTau6) assembly. UMD 3.1 contained 138 unlocalized contigs that were found to be contaminants. These have been suppressed in UMD 3.1.1.
 
-Suggests that there may not be a huge difference in the utility of BosTau8 over BosTau6.
+Suggests that there may not be a huge difference in the utility of BosTau8 over BosTau6. I also copied the Ensembl version of what should be the same data:
 
+```bash
+cd /share/tamu/Data/Genomes/Cow/bosTau6
+mkdir Ensembl-78-genome
+cd Ensembl-78-genome/
+curl -O ftp://ftp.ensembl.org//pub/release-78/fasta/bos_taurus/dna/Bos_taurus.UMD3.1.dna.toplevel.fa.gz
+mkdir Ensembl-78-genome
+cd Ensembl-78-genome/
+curl -O ftp://ftp.ensembl.org//pub/release-78/fasta/bos_taurus/dna/README
+```
+
+
+## Cow genome annotation data ##
+
+Ensembl is basing annotation on UMD 3.1 (BosTau6), so we should grab that info. Start with just the GTF data:
+
+```bash
+cd /share/tamu/Data/Genomes/Cow/bosTau6
+mkdir Ensembl-78-annotations
+cd Ensembl-78-annotations
+curl -O ftp://ftp.ensembl.org//pub/release-78/gtf/bos_taurus/Bos_taurus.UMD3.1.78.gtf.gz
+curl -O ftp://ftp.ensembl.org//pub/release-78/gtf/bos_taurus/README
+gunzip Bos_taurus.UMD3.1.78.gtf.gz
+
+```
 
 ## Extracting adaptor sequences ##
 

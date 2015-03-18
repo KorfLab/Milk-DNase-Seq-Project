@@ -292,7 +292,16 @@ rm 8Lvr_20_GTCCGC_L007_R1_001_processed.fastq 8Lvr_50_GTGAAA_L007_R1_001_process
 9. `cd /share/tamu/bin`
 10. `ln -s ../Packages/Bowtie2/current/bowtie2`
 11. `ln -s ../Packages/Bowtie2/current/bowtie2-build`
+12. `ln -s ../Packages/Bowtie2/current/bowtie2-inspect`
 
+## Installing bowtie2 (version 2.2.5) ##
+
+1. Downloaded Linux version from http://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.2.5/ and copied manually to tamu (`/share/tamu/Packages/Bowtie2`)
+2. `cd Packages/Bowtie2`
+3. `rm current`
+4. `ln -s bowtie2-2.2.5 current`
+
+Existing sym links in `/share/tamu/bin` should still work
 
 ## Installing BWA (version 0.7.10) ##
 
