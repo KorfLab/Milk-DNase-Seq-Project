@@ -398,5 +398,224 @@ time tophat --no-convert-bam -o run17 -r 400 --mate-std-dev 1382 /share/tamu/Dat
 ```
 
 
+## Summary ##
+
+Now we want to focus on using mappings to the transcriptome (-M -T option), but play around with different values of r and std deviation and focus on concordant mappings only so ignore singles file. Also will try data from a different individual.
+
+
+### Test run 18 ###
+
+Default value of -r and standard deviation. Map just to transcriptome (no -M option).
+
+```bash
+time tophat --no-convert-bam -o run18 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+```
+
+
+### Test run 19 ###
+
+As in run18 but add -M option 
+
+```bash
+time tophat --no-convert-bam -o run19 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+```
+
+
+### Test run 20 ###
+
+As in run19 but use -r 400
+
+```bash
+time tophat --no-convert-bam -o run20 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 400 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+```
+
+
+### Test run 21 ###
+
+As in run20 but use -r 800
+
+```bash
+time tophat --no-convert-bam -o run21 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 800 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+```
+
+
+### Test run 22 ###
+
+As in run21 but use --mate-std-dev of 1,000
+
+```bash
+time tophat --no-convert-bam -o run22 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 1000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+```
+
+### Test run 23 ###
+
+As in run22 but use --mate-std-dev of 2,000
+
+```bash
+time tophat --no-convert-bam -o run23 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 2000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+```
+
+## Summary of recent test runs ##
+
+Best = MAPQ score of 50, only proper concordant mapped pairs, and 101 bases
+match (could still result in pairs of reads spanning splice junctions)
+
+| Run | Notes       | -r  | Mapping% | Concordant% | MAPQ=50   | Best     |
+|:---:|:-----------:|:---:|:--------:|:-----------:|:---------:|:--------:|
+| 18  | T           |  50 |   68.9%  |    68.7%    |  136,748  |  84,996  |
+| 19  | TM          |  50 |   69.0%  |    68.8%    |  136,730  |  40,071  |
+| 20  | TM          | 400 |   69.0%  |    69.9%    |  137,026  |  53,109  |
+| 21  | TM          | 800 |   69.0%  |    69.0%    |  136,910  |  54,545  |
+| 22  | TM, std=1K  | 800 |   69.0%  |    69.0%    |  136,918  |  59,019  |
+| 23  | TM, std=2K  | 800 |   69.0%  |    69.0%    |  136,916  |  60,019  |
+
+Want to extract TLEN fields and convert to insert size, but maybe want to only take one read from a pair. Select for bitwise flags of 83 or 89 to get first reads?
+
+```bash
+cat run18/accepted_hits.sam | grep -vE "^@" | awk '$5 == 50 && ($2 == 99 || $2 == 83) {print}' |grep "101M" | cut -f 9 | grep '-' | awk '{print $1,"\t",-$1-202}'  > run18_mapping_distances.tsv
+```
+
+## Test run from different individuals ##
+
+Maybe there is something very different with the test data from the selected individual. So try repeating run22 with data from 2 other cows:
+
+```bash
+head -n 400000 ../../RNA-Seq_FASTQ_files/L502_C5B2KACXX-7-ID02_1_sequence_processed.fastq > seqsB_100K_1.fastq
+head -n 400000 ../../RNA-Seq_FASTQ_files/L502_C5B2KACXX-7-ID02_2_sequence_processed.fastq > seqsB_100K_2.fastq
+
+head -n 400000 ../../RNA-Seq_FASTQ_files/L531_C5B2KACXX-7-ID06_1_sequence_processed.fastq > seqsC_100K_1.fastq
+head -n 400000 ../../RNA-Seq_FASTQ_files/L531_C5B2KACXX-7-ID06_2_sequence_processed.fastq > seqsC_100K_2.fastq
+```
+
+### Test run 24 ###
+
+As in run22 but with seqsB data
+
+```bash
+time tophat --no-convert-bam -o run24 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 2000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqsB_100K_1.fastq seqsB_100K_2.fastq
+```
+
+### Test run 25 ###
+
+As in run22 but with seqsC data
+
+```bash
+time tophat --no-convert-bam -o run25 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 2000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqsC_100K_1.fastq seqsC_100K_2.fastq
+```
+
+
+
+## Bigger test run with final parameters
+
+Run26: now try with 1 million sequences from each pair (10x previous runs, just under 1% of total file size of parent file: 100,101,576 reads).
+
+```bash
+head -n 4000000 ../../RNA-Seq_FASTQ_files/L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq > seqs_1M_1.fastq
+head -n 4000000 ../../RNA-Seq_FASTQ_files/L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq > seqs_1M_2.fastq
+
+time tophat --no-convert-bam -o run26 --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 1000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_1M_1.fastq seqs_1M_2.fastq
+
+```
+
+
+## Build transcriptome index to save time in future ##
+
+As a final check of inner distances, we want to map to transcriptome and keep coordinates relative to transcriptome only. Current mappings put things back in genome coordinates so read pairs that span introns have much larger inner distances. Can make TopHat generate the Transcriptome index files (that it otherwise builds and then deletes) and this can be used for all subsequent runs which will speed things up. Need to use the `--transcriptome-index <dir/prefix>` option which will first build index in specified directory. Subsequent runs of TopHat can then use the same option to reuse the index, and this means you no longer need the --GTF option. This will also let us calculate a more accurate value for --mate-std-dev.
+
+
+```bash
+time tophat --GTF /share/tamu/Data/Genomes/Cow/bosTau6/Ensembl-78-annotations/Bos_taurus.UMD3.1.78.gtf --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index
+```
+
+
+## More test runs: run 27 ##
+Now we have a transcriptome index file, we can run against this and try different values of -r (as before), but also try a negative value. But now we want to use Bowtie 2 for the mappings as we won't have any spliced reads.
+
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --very-sensitive --no-mixed --no-discordant -1 seqs_100K_1.fastq -2 seqs_100K_2.fastq -p 2 -S run27.sam
+```
+
+Because this is Bowtie format, the MAPQ scores will be slightly different (max = 42, not 50), so need to slightly adjust how we extract inner distances:
+
+```bash
+cat run27.sam | grep -vE "^@" | awk '$5 == 42 && ($2 == 99 || $2 == 83) {print}'  | grep 101M | cut -f 9 | grep '-' | awk '{print $1,"\t",-$1-202}' > run27_mapping_distances.tsv
+```
+
+When plotted in R, this ends up giving a mean inner distance of 34 bp, with a standard deviation of 97 bp. The max inner distance was 298 bp, but this is to be expected because bowtie 2 uses a max fragment length (including reads) of 500. Can change this with -X option, so let's see what happens if you increase -X to 1,000 or 5,000:
+
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --very-sensitive -X 1000 --no-mixed --no-discordant -1 seqs_100K_1.fastq -2 seqs_100K_2.fastq -p 2 -S run28.sam
+```
+
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --very-sensitive -X 5000 --no-mixed --no-discordant -1 seqs_100K_1.fastq -2 seqs_100K_2.fastq -p 2 -S run29.sam
+```
+
+This latter option only added a couple of extra reads that only had distances marginally greater than 1,000 bp, so -X option doesn't need to go up much above 1,000.
+
+Without changing -X you end up with a mean and standard deviation of 34 and 97 bp. Increasing -X to 1000 seems to stop truncating the data and gives us a mean and standard deviation of 47 and 116 bp. So now let's see the difference of running TopHat again but using `--mate-std-dev` option set to 125 bp. Will also want to see the effect of using the TopHat `--b2-very-sensitive` option which passes the `--very-sensitive` parameter to Bowtie 2. Rather than investigate the average inner difference, just want to compare overall performance (how much output we get):
+
+```
+# run30: all defaults (but with Transcriptome settings)
+time tophat --no-convert-bam -o run30 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome  -T -M /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run31: default standard deviation (we've probably done this run before)
+time tophat --no-convert-bam -o run31 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --no-mixed --no-discordant -T -M /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run32: increase standard deviation to 125
+time tophat --no-convert-bam -o run32 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --no-mixed --no-discordant -T -M --mate-std-dev 125 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run33: standard deviation = 125, and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run33 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M --mate-std-dev 125 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+
+# run34: standard deviation = 125, -r = 100 and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run34 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 100 --mate-std-dev 125 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run35: standard deviation = 125, -r = 200 and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run35 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 200 --mate-std-dev 125 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run36: standard deviation = 125, -r = 400 and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run36 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 400 --mate-std-dev 125 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+
+# run37: standard deviation = 125, -r = 800 and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run37 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 125 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run38: standard deviation = 500, -r = 800 and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run38 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 500 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run39: standard deviation = 1000, -r = 800 and use --b2-very-sensitive option
+time tophat --no-convert-bam -o run39 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 1000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+# run40: standard deviation = 1000, -r = 800 no use of --b2-very-sensitive 
+time tophat --no-convert-bam -o run40 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 1000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
+
+```
+
+## Summary of the last set of test runs ##
+
+Best = MAPQ score of 50 and only proper concordant mapped pairs (SAM bitwise flag is 99, 147, 163, or 83)
+
+| Run | Notes                      | Mapping% |  N       | Best     | %Best  |
+|:---:|:--------------------------:|:--------:|:--------:|:--------:|:------:|
+| 30  | Defaults                   |   73.4%  | 150,235  |  84,996  |  56.6% |
+| 31  | No mixed/discordant        |   69.0%  | 139,398  |  83,662  |  60.0% |
+| 32  | Std=125                    |   69.0%  | 139,002  | 102,098  |  73.5% |
+| 33  | Std=125, sensitive         |   69.0%  | 139,024  | 102,112  |  73.4% |
+| 34  | Std=125, r=100, sensitive  |   69.0%  | 138,970  | 105,748  |  76.1% |
+| 35  | Std=125, r=200, sensitive  |   69.0%  | 138,848  | 107,112  |  77.1% |
+| 36  | Std=125, r=400, sensitive  |   69.0%  | 138,680  | 106,500  |  76.8% |
+| 37  | Std=125, r=800, sensitive  |   69.0%  | 139,014  | 111,012  |  79.8% |
+| 38  | Std=500, r=800, sensitive  |   69.0%  | 138,792  | 115,770  |  83.4% |
+| 39  | Std=1000, r=800, sensitive |   69.0%  | 139,516  | 124,038  |  88.9% |
+| 40  | Std=1000, r=800,           |   69.0%  | 139,494  | 124,016  |  88.9% |
+
+On the basis of this, I will proceed using the settings of run 39. This gives the most high quality mapped pairs, even if the value of r may not be 100% appropriate.
+
+
 # Main run on TopHat
 
+Use `wrapper3.pl` script in `/share/tamu/Analysis/RNA-Seq_FASTQ_files` directory to submit `run_tophat.sh` script to job scheduler. This should create new output directories in `/share/tamu/Analysis/TopHat_output` (one directory for each of the 31 samples). 
+
+Reminder, this run is not going to use the singles files. We may wish to return to these later when looking to improve gene annotations.
