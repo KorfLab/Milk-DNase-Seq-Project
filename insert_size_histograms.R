@@ -146,7 +146,7 @@ abline(v = 699.4, col="red", lwd=2)
 
 
 # run27, Bowtie2 against Transcriptome-index, X=500
-data = read.table("run27_mapping_distances.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
+data = read.table("~/Work/Code/Milk-DNase-Seq-Project/run27_mapping_distances.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
 summary(data$V2)
 bins=seq(-101,300,by=3)
 hist(data$V2, xlim=c(-101, 800),breaks=bins, col="red", main = "Reads mapped to Transcriptome with Bowtie 2", xlab="Inner size between mapped read pairs")
@@ -155,7 +155,7 @@ sd(data$V2)
 
 
 # run28, Bowtie2 against Transcriptome-index, X=1000
-data = read.table("run28_mapping_distances.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
+data = read.table("~/Work/Code/Milk-DNase-Seq-Project/run28_mapping_distances.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
 summary(data$V2)
 data.subset = subset(data, V2>298)
 bins=seq(-101,800,by=3)
