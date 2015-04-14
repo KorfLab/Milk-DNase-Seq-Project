@@ -267,7 +267,35 @@ join_htseq_count_files.pl "*-ID*.txt"
 mv tmp_join_file.txt count_data_for_all_samples.tsv
 ```
 
+This file includes error counts in last few rows which we want to remove:
 
+```bash
+grep -v __ count_data_for_all_samples.tsv  > tmp; mv tmp count_data_for_all_samples.tsv
+```
 
+Could also filter each file separately:
 
+```bash
+for f in *.txt; do grep -v __ $f > tmp; mv -f tmp $f; done
+```
 
+# DESseq analysis
+
+Installed latest DESeq2 package in R using following R commands:
+
+```R
+source("http://bioconductor.org/biocLite.R")
+biocLite("DESeq2")
+```
+
+Following DESeq2 information in these online guides and manuals:
+
+http://dwheelerau.com/2014/02/17/how-to-use-deseq2-to-analyse-rnaseq-data/
+
+http://bioconductor.fmrp.usp.br/packages/2.14/bioc/vignettes/DESeq2/inst/doc/beginner.pdf
+
+http://www.bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.pdf
+
+http://www.sthda.com/english/wiki/rna-seq-differential-expression-work-flow-using-deseq2
+
+http://www.bioconductor.org/packages/release/bioc/manuals/DESeq2/man/DESeq2.pdf
