@@ -180,7 +180,7 @@ Reminder, this run is not going to use the singles files. We may wish to return 
 All but one job failed with 'MemoryError' so I resubmitted with a request for 8 GB RAM per thread and instructed TopHat and qsub to just use one thread per process. Qsub commands looked like this:
 
 ```bash
-qsub -S /bin/bash -pe threaded 1 -l h_vmem=8G -M keith\@bradnam.co -m be -N krb_tophat_run /share/tamu/Code/run_tophat.sh L478_C4K66ACXX-7-ID10_1_sequence_processed.fastq L478_C4K66ACXX-7-ID10_2_sequence_processed.fastq /share/tamu/Analysis/TopHat_output/L478_C4K66ACXX-7-ID10
+qsub -S /bin/bash -pe threaded 1 -l h_vmem=8G -M keith\@bradnam.co -m be -N krb_tophat_run /share/tamu/Code/run_tophat.sh L478_C4K66ACXX-7-ID10_1_sequence_processed.fastq L478_C4K66ACXX-7-ID10_2_sequence_processed.srr /share/tamu/Analysis/TopHat_output/L478_C4K66ACXX-7-ID10
 ```
 
 
@@ -229,7 +229,7 @@ grep -v "^@"  ../TopHat_output/L468_C4K66ACXX-7-ID09/accepted_hits.sam head -n 2
 Two ways to get only the good quality reads (unique and concordantly mapped). Both of the following give identical output, but the awk method doesn't require SAM header lines to be present:
 
 ```bash
-cat test_1M.sam | awk '$5 == 50 && ($2 == 163 || $2 == 147 || $2 == 83 || $2 == 99) {print}' 
+cat test_1M.sam | w
 
 samtools  view -q 50 -f 0x2 test_1M.sam
 
@@ -244,15 +244,31 @@ cat test_25M.sam | awk '$5 == 50 && ($2 == 163 || $2 == 147 || $2 == 83 || $2 ==
 
 # Testing HTSeq
 
-Need to use `-r pos` to tell htseq-count that our data is already sorted by position. The default GFF feature to map to is exon (`-t` option) which should suffice as should the default value of 'gene_id' for the `-i` option (specifying the attribute field). First runs will test difference of using `-s no` to specify that this is not a stranded assay (default is yes).
+Need to use `-r pos` to tell htseq-count that our data is already sorted by position. The default GFF feature to map to is exon (`-t` option) which should suffice as should the default value of 'gene_id' for the `-i` option (specifying the attribute field). First runs will test difference of using `-s no` to specify that this is not a stranded assay (default is yes). Using a full SAM file (>31 million reads):
 
 ```bash
 
-htseq-count -r pos -m intersection-nonempty test_1M_HQ.sam ../Bowtie2_indexes/Ensembl_78_transcriptome.gff > test_htseq_run1.txt
+htseq-count -r pos -m intersection-nonempty L468_C4K66ACXX-7-ID09/accepted_hits.sam ../Bowtie2_indexes/Ensembl_78_transcriptome.gff > test_htseq_run1.txt
 
-htseq-count -r pos -m intersection-nonempty -s no test_1M_HQ.sam ../Bowtie2_indexes/Ensembl_78_transcriptome.gff > test_htseq_run2.txt
+htseq-count -r pos -m intersection-nonempty -s no L468_C4K66ACXX-7-ID09/accepted_hits.sam ../Bowtie2_indexes/Ensembl_78_transcriptome.gff > test_htseq_run2.txt
+
+tail -n 5 test_htseq_run*
+==> test_htseq_run1.txt <==
+__no_feature    15848564
+__ambiguous     10
+__too_low_aQual 0
+__not_aligned   0
+__alignment_not_unique  0
+
+==> test_htseq_run2.txt <==
+__no_feature    10868
+__ambiguous     2769
+__too_low_aQual 0
+__not_aligned   0
+__alignment_not_unique  0
 
 ```
+
 
 We definitely need to use `-s no` otherwise it doesn't count reads that are on the opposite strand to an exon feature.
 
@@ -290,12 +306,11 @@ biocLite("DESeq2")
 
 Following DESeq2 information in these online guides and manuals:
 
-http://dwheelerau.com/2014/02/17/how-to-use-deseq2-to-analyse-rnaseq-data/
+1. <http://dwheelerau.com/2014/02/17/how-to-use-deseq2-to-analyse-rnaseq-data/>
+2. <http://bioconductor.fmrp.usp.br/packages/2.14/bioc/vignettes/DESeq2/inst/doc/beginner.pdf>
+3. <http://www.bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.pdf>
+4. <http://www.sthda.com/english/wiki/rna-seq-differential-expression-work-flow-using-deseq2>
+5. <http://www.bioconductor.org/packages/release/bioc/manuals/DESeq2/man/DESeq2.pdf>
 
-http://bioconductor.fmrp.usp.br/packages/2.14/bioc/vignettes/DESeq2/inst/doc/beginner.pdf
-
-http://www.bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.pdf
-
-http://www.sthda.com/english/wiki/rna-seq-differential-expression-work-flow-using-deseq2
-
-http://www.bioconductor.org/packages/release/bioc/manuals/DESeq2/man/DESeq2.pdf
+Borrowing from other people's examples, it seems that you can combine multiple htseq count files within the DESeq2 package (obviating the need for some of my earlier steps). So I copied count data from individual files into a subdirectory (`HTSeq_count_files/`). The R script [DESeq2_analysis](DESeq2_analysis.R) was used to generate log-odds plot and final output file (`deseq2_output_virgin_vs_lactation.csv`).
+My main script for generating the log-fold change script from the raw
