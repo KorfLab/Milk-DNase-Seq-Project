@@ -1,3 +1,7 @@
+
+# set directory
+setwd("~/Work/Code/Milk-DNase-Seq-Project/")
+
 # run3, r = 50 (default)
 data = read.table("run3_mapping_distances.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
 summary(data$V2)
@@ -170,3 +174,37 @@ bins=seq(22,70,4)
 bins
 hist(Y,breaks=bins)
 
+
+
+##########################
+# Plots for lab meeting
+##########################
+
+# uses all of one FASTQ file, default parameter for max fragment length (X=500) vs X=2000
+
+# X=500
+data1 = read.table("~/Work/Code/Milk-DNase-Seq-Project/X500.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
+summary(data1$V2)
+bins=seq(-101,300,by=3)
+hist(data1$V2, xlim=c(-101, 800),breaks=bins, col="red", main = "Reads mapped to Transcriptome with Bowtie 2", xlab="Inner size between mapped read pairs")
+abline(v = 24.88, col="red", lwd=2)
+sd(data$V2)
+
+
+# X=2000
+data2 = read.table("~/Work/Code/Milk-DNase-Seq-Project/X2000.tsv", na.strings = "", blank.lines.skip=TRUE, fill=TRUE, stringsAsFactors=FALSE)
+summary(data2$V2)
+data2.subset = subset(data2, V2>298)
+bins=seq(-101,1800,by=3)
+hist(data2.subset$V2, add=T, xlim=c(101, 800),breaks=bins, col=rgb(0, 0, 1, 0.5), main = "Reads mapped to Transcriptome with Bowtie 2", xlab="Inner size between mapped read pairs")
+abline(v = 38.18, col="blue", lwd=2)
+sd(data$V2)
+
+
+# new plot to show range at far end
+bins=seq(-101,300,by=50)
+hist(data1$V2, ylim=c(0,100), xlim=c(-101, 1800),breaks=bins, col="red", main = "Reads mapped to Transcriptome with Bowtie 2", xlab="Inner size between mapped read pairs")
+
+bins=seq(-101,1800,by=50)
+data2.subset = subset(data2, V2>300)
+hist(data2.subset$V2, add=T, ylim=c(0,100), xlim=c(105, 1800),breaks=bins, col=rgb(0, 0, 1, 0.5), main = "Reads mapped to Transcriptome with Bowtie 2", xlab="Inner size between mapped read pairs")

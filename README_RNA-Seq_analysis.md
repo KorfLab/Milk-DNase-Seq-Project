@@ -314,3 +314,9 @@ Following DESeq2 information in these online guides and manuals:
 
 Borrowing from other people's examples, it seems that you can combine multiple htseq count files within the DESeq2 package (obviating the need for some of my earlier steps). So I copied count data from individual files into a subdirectory (`HTSeq_count_files/`). The R script [DESeq2_analysis](DESeq2_analysis.R) was used to generate log-odds plot and final output file (`deseq2_output_virgin_vs_lactation.csv`).
 My main script for generating the log-fold change script from the raw
+
+
+# DE analysis using limma/voom
+
+Following limma information in this user guide <http://www.bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf> and writing code in [limma_analysis](limma_analysis.R) script.
+
