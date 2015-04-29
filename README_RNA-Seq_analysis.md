@@ -312,8 +312,10 @@ Following DESeq2 information in these online guides and manuals:
 4. <http://www.sthda.com/english/wiki/rna-seq-differential-expression-work-flow-using-deseq2>
 5. <http://www.bioconductor.org/packages/release/bioc/manuals/DESeq2/man/DESeq2.pdf>
 
-Borrowing from other people's examples, it seems that you can combine multiple htseq count files within the DESeq2 package (obviating the need for some of my earlier steps). So I copied count data from individual files into a subdirectory (`HTSeq_count_files/`). The R script [DESeq2_analysis](DESeq2_analysis.R) was used to generate log-odds plot and final output file (`deseq2_output_virgin_vs_lactation.csv`).
-My main script for generating the log-fold change script from the raw
+Borrowing from other people's examples, it seems that you can combine multiple htseq count files within the DESeq2 package (obviating the need for some of my earlier steps). So I copied count data from individual files into a subdirectory (`HTSeq_count_files/`). The R script `DESeq2_analysis.R` was used to generate log-odds plot, gene specific expression plots, and the final CSV output files.
+
+For an overview of what DESeq revealed, see the `summary_for_monique.md` file.
+
 
 
 # DE analysis using limma/voom

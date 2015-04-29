@@ -89,6 +89,7 @@ gunzip Bos_taurus.UMD3.1.78.gtf.gz
 
 ```
 
+
 ## Extracting adaptor sequences ##
 
 From supplied Illumina PDF file, I made a single FASTA file containing sequence of the Universal TruSeq adapter, and the 24 TruSeq index adapters, and placed in  `Data/DNase-Seq/Mouse/adapter_sequences.fasta`
