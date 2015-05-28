@@ -9,16 +9,6 @@ Stored in `/share/tamu/Data/RNA-Seq/Cow/2014-10`. Looks like paired-read 100 bp 
 
 The ultimate goal is to find genes that are differentially expressed between these two developmental stages.
 
-These files were originally compressed with bzip2, will re-compress with gzip so that existing pipelines can work with them. And will also rename them to have fastq suffix:
-
-```bash
-cd /share/tamu/Data/RNA-Seq/Cow/2014-10
-bunzip2 *.bz2
-rename.pl s/txt/fastq/ *.txt
-gzip *.fastq
-```
-
-
 
 ## Checking barcodes in RNA-Seq data ##
 
@@ -149,6 +139,7 @@ ln -s ../Packages/TopHat/current/tophat
 ln -s ../Packages/TopHat/current/tophat2
 ```
 
+
 # Make Bowtie2 index
 
 Will make indexes for UMD 3.1 (bosTau6) and newer BCM Btau_4.6.1 (bosTau7). But start with the genome that we will probably use the most. We also want to have same FASTA file present in the index directory (for use by TopHat later on). Will try just using symbolic link for now:
@@ -172,6 +163,19 @@ After [extensive testing](README_TopHat_testing.md) I chose the following parame
 # run39: standard deviation = 1000, -r = 800 and use --b2-very-sensitive option
 time tophat --no-convert-bam -o run39 --transcriptome-index /share/tamu/Data/Bowtie2_indexes/Ensembl_78_transcriptome --b2-very-sensitive --no-mixed --no-discordant -T -M -r 800 --mate-std-dev 1000 /share/tamu/Data/Bowtie2_indexes/Ensembl-78-index seqs_100K_1.fastq seqs_100K_2.fastq
 ```
+
+This includes options as follows:
+  --no-convert-bam      -> keep output as SAM (as space is not an issue)
+  --o                   -> output directory name
+  --transcriptome-index -> use pre-built transcriptome index to save time
+  --b2-very-sensitive   -> make sure that bowtie (used by TopHat) runs in -very-sensitive mode
+  --no-mixed            -> want both reads from read pair to map
+  --no-discordant       -> want concordantly mapped read pairs
+  -T                    -> map to transcriptome not genome
+  -M                    -> pre-map to genome (to get an idea of reads which might have multiple hits) 
+  -r                    -> mean (?) distance between read pairs
+  --mate-std-dev        -> standard deviation of distance between read pairs
+
 
 Use `wrapper3.pl` script in `/share/tamu/Analysis/RNA-Seq_FASTQ_files` directory to submit `run_tophat.sh` script to job scheduler. This should create new output directories in `/share/tamu/Analysis/TopHat_output` (one directory for each of the 31 samples). 
 
@@ -565,20 +569,137 @@ Already have bowtie2 index for genome from earlier step (`/share/tamu/Data/Bowti
 
 ## Test run
 
-Trying `--time` to 'print the wall-clock time required to load the index files and align the reads'. Other options are used as before, generally being very conservative by running in `--very-sensitive` mode with `--no-mixed` and `--no-discordant` options which will end up throwing away data where only one read from a pair matches well.
+Trying `--time` to 'print the wall-clock time required to load the index files and align the reads'. Also using `--no-unal` to suppress reads that didn't align (though we may want to revisit these later on). Other options are used as before, generally being very conservative by running in `--very-sensitive` mode with `--no-mixed` and `--no-discordant` options which will end up throwing away data where only one read from a pair matches well.
 
 Will start with one pair of FASTQ files to get a feel for how long this will take.
 
 ```bash
-time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/bosTau6 --very-sensitive --no-mixed --no-discordant -X 1000 --time -1 L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq -2 L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq -S L468.sam
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/bosTau6 --very-sensitive --no-mixed --no-discordant -p 20 -X 1000 --no-unal --time -1 L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq -2 L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq -S L468.sam
+
+25025394 reads; of these:
+  25025394 (100.00%) were paired; of these:
+    11215151 (44.82%) aligned concordantly 0 times
+    11424156 (45.65%) aligned concordantly exactly 1 time
+    2386087 (9.53%) aligned concordantly >1 times
+55.18% overall alignment rate
+Time searching: 00:27:57
+Overall time: 00:27:57
+
+real    27m57.236s
+```
+
+
+## Test run 2
+
+How much difference is there if I drop the requirements for no-mixed and concordancy?
+
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/bosTau6 --very-sensitive -p 20 -X 1000 --no-unal -1 L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq -2 L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq -S L468_test2.sam
+
+25025394 reads; of these:
+  25025394 (100.00%) were paired; of these:
+    11215151 (44.82%) aligned concordantly 0 times
+    11424156 (45.65%) aligned concordantly exactly 1 time
+    2386087 (9.53%) aligned concordantly >1 times
+    ----
+    11215151 pairs aligned concordantly 0 times; of these:
+      1223078 (10.91%) aligned discordantly 1 time
+    ----
+    9992073 pairs aligned 0 times concordantly or discordantly; of these:
+      19984146 mates make up the pairs; of these:
+        14766996 (73.89%) aligned 0 times
+        4754472 (23.79%) aligned exactly 1 time
+        462678 (2.32%) aligned >1 times
+70.50% overall alignment rate
+
+real    25m58.002s
 ```
 
 
 
+## Test run 3
+
+Increasing -X to 2000 
+
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/bosTau6 --very-sensitive -p 20 -X 2000 --no-unal -1 L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq -2 L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq -S L468_test3.sam
+
+25025394 reads; of these:
+  25025394 (100.00%) were paired; of these:
+    10842371 (43.33%) aligned concordantly 0 times
+    11759153 (46.99%) aligned concordantly exactly 1 time
+    2423870 (9.69%) aligned concordantly >1 times
+    ----
+    10842371 pairs aligned concordantly 0 times; of these:
+      893827 (8.24%) aligned discordantly 1 time
+    ----
+    9948544 pairs aligned 0 times concordantly or discordantly; of these:
+      19897088 mates make up the pairs; of these:
+        14764483 (74.20%) aligned 0 times
+        4719662 (23.72%) aligned exactly 1 time
+        412943 (2.08%) aligned >1 times
+70.50% overall alignment rate
+
+real    53m0.126s
+```
 
 
 
+## Test run 4
 
+Increasing -X to 4000 
+
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/bosTau6 --very-sensitive -p 20 -X 4000 --no-unal -1 L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq -2 L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq -S L468_test4.sam
+
+25025394 reads; of these:
+  25025394 (100.00%) were paired; of these:
+    10548233 (42.15%) aligned concordantly 0 times
+    12026580 (48.06%) aligned concordantly exactly 1 time
+    2450581 (9.79%) aligned concordantly >1 times
+    ----
+    10548233 pairs aligned concordantly 0 times; of these:
+      624491 (5.92%) aligned discordantly 1 time
+    ----
+    9923742 pairs aligned 0 times concordantly or discordantly; of these:
+      19847484 mates make up the pairs; of these:
+        14762524 (74.38%) aligned 0 times
+        4699123 (23.68%) aligned exactly 1 time
+        385837 (1.94%) aligned >1 times
+70.50% overall alignment rate
+
+real    90m3.766s
+```
+
+
+## Test run 5
+
+Final check is compare to a default value of X
+```bash
+time bowtie2 -x /share/tamu/Data/Bowtie2_indexes/bosTau6 --very-sensitive -p 20  --no-unal -1 L468_C4K66ACXX-7-ID09_1_sequence_processed.fastq -2 L468_C4K66ACXX-7-ID09_2_sequence_processed.fastq -S L468_test5.sam
+
+25025394 reads; of these:
+  25025394 (100.00%) were paired; of these:
+    11804655 (47.17%) aligned concordantly 0 times
+    10921893 (43.64%) aligned concordantly exactly 1 time
+    2298846 (9.19%) aligned concordantly >1 times
+    ----
+    11804655 pairs aligned concordantly 0 times; of these:
+      1684842 (14.27%) aligned discordantly 1 time
+    ----
+    10119813 pairs aligned 0 times concordantly or discordantly; of these:
+      20239626 mates make up the pairs; of these:
+        14770512 (72.98%) aligned 0 times
+        4831871 (23.87%) aligned exactly 1 time
+        637243 (3.15%) aligned >1 times
+70.49% overall alignment rate
+
+real    19m8.910s
+```
+
+Hmm, so increasing -X from default (500) to 4000 more than quadruples total run time and rewards you with an increase in uniquely + concordantly mapped read pairs from 10,921,893 to 12,026,580 (10% increase).
+
+At -X = 2000, time is about 2.5 times as long with about an 8% increase in good read pairs mapped. Will go with this option for the main script.
 
 
 

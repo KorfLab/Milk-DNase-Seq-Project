@@ -21,7 +21,8 @@ Use `-nolow`, `-noint`, and `-norna` to turn off masking of some classes of repe
 time RepeatMasker -qq -pa 8 -nolow -noint -norna -gff -species cow bos_taurus.fa
 ```
 
-This took 35 hours. So now try…
+This took 35 hours. I renamed the output files to include `_qq`. So now try…
+
 
 ## 2nd test using -s (slow mode)
 
@@ -31,7 +32,33 @@ Should be more sensitive.
 time RepeatMasker -s -pa 8 -nolow -noint -norna -gff -species cow bos_taurus.fa
 ```
 
-This seemed to crash, so will stick with the --qq masked version?
+This seemed to crash. Maybe a problem of the -no{*} options? I reported details to RepeatMasker website.
+
+
+## 3rd test (default mode)
+
+Now trying the regular version (no -q, -qq, or -s):
+
+```bash
+time RepeatMasker -pa 8 -gff -species cow bos_taurus.fa
+```
+
+Took ~45 hours.
+
+
+## 4rd test -s (slow mode), again
+
+Back to slow mode, but without the -no{*} options:
+
+
+```bash
+time RepeatMasker -s -pa 8 -gff -species cow bos_taurus.fa
+```
+
+
+## What was the difference between -qq and default mode?
+
+The main difference seems to be that rush job mode (`-qq`) annotates fewer repeats. The total proportion of repeats falls from 46.35% (default mode) to 42.60% (rush mode).
 
 
 ## Also generated some repeats from Repeatmasker.org ##

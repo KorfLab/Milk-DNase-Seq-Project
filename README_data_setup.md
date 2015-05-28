@@ -1,7 +1,7 @@
-Milk-DNase-Seq-Project
-======================
+# Milk project to characterize regulatory regions in the bovine genome #
 
-Analysis of milk DNase-Seq data in mouse and cow.
+
+Will involve analysis of milk DNase-Seq and RNA-Seq data in cow (but also with some mouse data).
 
 
 # Setup of directories for raw data #
@@ -17,7 +17,6 @@ In the shared folder, we will create:
 	Data/DNAse-Seq/Mouse/
 	Data/RNA-Seq/
 	Data/RNA-Seq/Cow/
-	Data/RNA-Seq/Mouse/
 
 	
 `Genomes` subdirectory will ultimately contain reference genome sequences and annotations, whereas `DNAse-Seq` and `RNA-Seq` directories will contain our raw experimental data (in date-versioned subdirectories).
@@ -27,6 +26,7 @@ I've also added a `Data/RNA-Seq/Cow/Metadata` for a couple of files Danielle pro
 `CowLactationRNASeqMetadata.txt` - A guess of what the sample IDs really mean
 `CowLactationRNASeqMappingStats.tsv` - tab delimited file containing mapping statistics from Baylor
 
+
 ## DNAse-Seq data for mouse ##
 The data exists as a set of zip files (one per sample). Each zip file contains several FASTQ files. Need to unzip everything (until we have enough secondary output files):
 
@@ -35,6 +35,20 @@ cd /share/tamu/Data/DNase-Seq/Mouse
 # need to quote names for expansion to work with unzip (don't know why)
 $ unzip '*.zip'
 ```
+
+
+## RNA-Seq data for cow ##
+
+In `/share/tamu/Data/RNA-Seq/Cow/2014-10`. These files were originally compressed with bzip2, will re-compress with gzip so that existing pipelines can work with them. And will also rename them to have fastq suffix:
+
+```bash
+cd /share/tamu/Data/RNA-Seq/Cow/2014-10
+bunzip2 *.bz2
+rename.pl s/txt/fastq/ *.txt
+gzip *.fastq
+```
+
+15 files for virgin samples, and 16 files for lactation samples (all paired except one).
 
 
 ## Genome data ##
