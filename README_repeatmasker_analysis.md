@@ -56,9 +56,11 @@ time RepeatMasker -s -pa 8 -gff -species cow bos_taurus.fa
 ```
 
 
-## What was the difference between -qq and default mode?
+## What was the difference between -qq, -s and default mode?
 
-The main difference seems to be that rush job mode (`-qq`) annotates fewer repeats. The total proportion of repeats falls from 46.35% (default mode) to 42.60% (rush mode).
+Moving from -qq to default to -s mode gives you more repeats. The total proportion of repeats falls from 47.92% (slow mode) to 46.35% (default mode) to 42.60% (rush mode).
+
+
 
 
 ## Also generated some repeats from Repeatmasker.org ##

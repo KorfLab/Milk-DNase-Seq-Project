@@ -177,15 +177,18 @@ This includes options as follows:
   --mate-std-dev        -> standard deviation of distance between read pairs
 
 
-Use `wrapper3.pl` script in `/share/tamu/Analysis/RNA-Seq_FASTQ_files` directory to submit `run_tophat.sh` script to job scheduler. This should create new output directories in `/share/tamu/Analysis/TopHat_output` (one directory for each of the 31 samples). 
+Use `wrapper3.pl` script in `/share/tamu/Code/` directory to submit `run_tophat.sh` script to job scheduler. This should create new output directories in `/share/tamu/Analysis/TopHat_output` (one directory for each of the 31 samples). This requires having symbolic links in the `TopHat_output` directory to all of the \*.processed.fastq files in `/share/tamu/Analysis/RNA-Seq_FASTQ_files`.
 
-Reminder, this run is not going to use the singles files. We may wish to return to these later when looking to improve gene annotations.
+Reminder, this run is *not* going to use the singles files. We may wish to return to these later when looking to improve gene annotations.
 
 All but one job failed with 'MemoryError' so I resubmitted with a request for 8 GB RAM per thread and instructed TopHat and qsub to just use one thread per process. Qsub commands looked like this:
 
 ```bash
 qsub -S /bin/bash -pe threaded 1 -l h_vmem=8G -M keith\@bradnam.co -m be -N krb_tophat_run /share/tamu/Code/run_tophat.sh L478_C4K66ACXX-7-ID10_1_sequence_processed.fastq L478_C4K66ACXX-7-ID10_2_sequence_processed.srr /share/tamu/Analysis/TopHat_output/L478_C4K66ACXX-7-ID10
 ```
+
+I removed the symbolic links after TopHat had finished running. A script `/share/tamu/Code/count_high_quality_tophat_matches.pl` can be run in the `TopHat_output` directory to count how many 'high-quality' matches there are in each SAM output file (i.e. MAPQ score == 50 (unique match) and all read pairs are concordantly aligned).
+
 
 
 # Generate count data
@@ -278,7 +281,7 @@ We definitely need to use `-s no` otherwise it doesn't count reads that are on t
 
 # Running HTseq
 
-Wrote a simple wrapper Perl script to first filter SAM files (using awk approach shown above) and then run htseq-count. Final output files are in `/share/tamu/Analysis/Filter_SAM_files`
+Wrote a simple wrapper Perl script `/share/tamu/Code/extract_hq_matches_from_SAM_file.pl` to first filter SAM files (using awk approach shown above) and then run htseq-count. Final output files are in `/share/tamu/Analysis/Filter_SAM_files`
 
 I then wrote another Perl wrapper script `/share/tamu/Code/join_htseq_count_files.pl` that uses the Unix `join` command to join all of the counts files into one final file:
 
@@ -702,5 +705,14 @@ Hmm, so increasing -X from default (500) to 4000 more than quadruples total run 
 At -X = 2000, time is about 2.5 times as long with about an 8% increase in good read pairs mapped. Will go with this option for the main script.
 
 
+## Final choices for Bowtie runs
 
+Made two sets of runs for each pair of FASTQ files, one with more stringency (Q1) and one with less stringency (Q2). The difference was just the presence/absense of the options `--no-mixed` and `--no-discordant`:
 
+```bash
+# Example Q1 run
+bowtie2 -x ../Bowtie2_indexes/bosTau6_index --very-sensitive -p 20 -X 2000 --no-unal --no-mixed --no-discordant -1 V615_C4K66ACXX-3-ID12_1_sequence_processed.fastq -2 V615_C4K66ACXX-3-ID12_2_sequence_processed.fastq -S V615_C4K66ACXX-3-ID12_X2000_Q1.sam
+
+# Example Q2 run
+bowtie2 -x ../Bowtie2_indexes/bosTau6_index --very-sensitive -p 20 -X 2000 --no-unal -1 V615_C4K66ACXX-3-ID12_1_sequence_processed.fastq -2 V615_C4K66ACXX-3-ID12_2_sequence_processed.fastq -S V615_C4K66ACXX-3-ID12_X2000_Q2.sam
+```
